@@ -6,7 +6,11 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 	 */
     if( changeInfo.status === "complete" )
     {
-    	chrome.tabs.executeScript(tabId, {file: "main.js"}, function(){console.log(arguments);});
+    	chrome.tabs.executeScript(tabId, { file: "jquery.min.js" }, function() {
+		    chrome.tabs.executeScript(tabId, { file: "main.js" }, function(){
+		    	console.log('Everything is ok', arguments);
+		    });
+		});
 	}
 });
 

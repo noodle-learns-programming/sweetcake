@@ -1,8 +1,12 @@
-var allLinks 	= document.getElementsByTagName("a");
-var link 		= null;
-console.log(allLinks.length);
-for(var i = 0; i < allLinks.length; i++)
-{
-	link = allLinks[i];
-	link.innerText = 'Phu test';
-}
+jQuery('a').css('color', 'red');
+
+jQuery('a').click(function(e){
+	var message = {
+		text : $(this).text(),
+		href : $(this).attr('href'),
+	};
+	console.log('chrome.runtime.sendMessage | before: ', message);
+	chrome.runtime.sendMessage(message, function(response) {
+		console.log('chrome.runtime.sendMessage | after:', message, response);
+	});
+});
