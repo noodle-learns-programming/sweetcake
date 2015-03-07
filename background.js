@@ -13,16 +13,19 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 		});
 	}
 });
+chrome.tabs.onCreated.addListener(function(tabId, changeInfo, tab) {
+	console.log('chrome.tabs.onCreated: ', changeInfo, tab);
+});
 
-chrome.tabs.onCreated.addListener(function(tabId, changeInfo, tab) {         
-	console.log('chrome.tabs.onCreated.addListener: ', changeInfo);
+chrome.tabs.onRemoved.addListener(function(tabId, changeInfo, tab) {
+	console.log('chrome.tabs.onRemoved: ', changeInfo, tab);
 });
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	console.log(
-		sender.tab ?
-        "from a content script:" + sender.tab.url :
-        "from the extension"
+		sender.tab
+		? "tab:" + sender.tab
+        : "tab: undefined"
     );
     console.log(request);
 });
