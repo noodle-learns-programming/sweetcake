@@ -1,9 +1,8 @@
-jQuery('a').css('color', 'red');
-
-jQuery('a').click(function(e){
+jQuery(document).click(function(e){
+	var $target = $(e.target);
 	var message = {
-		text : $(this).text(),
-		href : $(this).attr('href'),
+		text : $target.text(),
+		href : $target.attr('href'),
 	};
 	console.log('chrome.runtime.sendMessage | before: ', message);
 	chrome.runtime.sendMessage(message, function(response) {

@@ -17,3 +17,12 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 chrome.tabs.onCreated.addListener(function(tabId, changeInfo, tab) {         
 	console.log('chrome.tabs.onCreated.addListener: ', changeInfo);
 });
+
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+	console.log(
+		sender.tab ?
+        "from a content script:" + sender.tab.url :
+        "from the extension"
+    );
+    console.log(request);
+});
