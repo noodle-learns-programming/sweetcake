@@ -1,7 +1,15 @@
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    //alert('Tab is updated');//worked
+	/**
+	 |---------------------------------------------------------------------
+	 | There are two state: ["upding", "complete"] when the tab is reloaded
+	 |---------------------------------------------------------------------
+	 */
+    if( changeInfo.status === "complete" )
+    {
+    	chrome.tabs.executeScript(tabId, {file: "main.js"}, function(){console.log(arguments);});
+	}
 });
 
 chrome.tabs.onCreated.addListener(function(tabId, changeInfo, tab) {         
-   //alert('Tab is open');//worked
+	console.log('chrome.tabs.onCreated.addListener: ', changeInfo);
 });

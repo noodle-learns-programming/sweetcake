@@ -16,6 +16,6 @@
       "background",
       "activeTab",
       "tabs",
-      "https://ajax.googleapis.com/"
+      "*://*/*"
     ]
 }
