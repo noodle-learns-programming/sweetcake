@@ -9,10 +9,12 @@
       "default_popup": "popup.html"
     },
     "background" : {
-      "scripts": [ "jquery.min.js", "background.js" ]
+      "scripts": [ "jquery.min.js", "background.js" ],
+      "persistent": false
     },
     "permissions": [
       "background",
+      "activeTab",
       "tabs",
       "https://ajax.googleapis.com/"
     ]
