@@ -1,15 +1,3 @@
-jQuery(document).click(function(e){
-	var $target = $(e.target);
-	var message = {
-		text : $target.text(),
-		href : Helper.absoluteUrl($target.attr('href')),
-	};
-	console.log('chrome.runtime.sendMessage | before: ', message);
-	chrome.runtime.sendMessage(message, function(response) {
-		console.log('chrome.runtime.sendMessage | after:', message, response);
-	});
-});
-
 Helper = {};
 Helper.absoluteUrl = function(url) {
     var img = document.createElement('img');
@@ -18,3 +6,15 @@ Helper.absoluteUrl = function(url) {
     img.src = null;
     return url;
 };
+jQuery(document).ready(function(e){
+	jQuery('a').css('color', 'red');
+	jQuery(document).click(function(e){
+		var $target = $(e.target);
+		var message = {
+			text : $target.text(),
+			href : Helper.absoluteUrl($target.attr('href')),
+		};
+		chrome.runtime.sendMessage(message, function(response) {
+		});
+	});
+});
