@@ -12,33 +12,58 @@ var TabManager  = {};
 TabManager.dictMasterUrls      = {};
 TabManager.dictFistLevelUrls    = {};
 TabManager.dictManagedTabs      = {};
-TabManager.addTab = function(tab){
-    if( this.dictManagedTabs[tab.id] ) {
+TabManager.preAddATab = function(tabInfo)
+{
+    if( !tabInfo.openerTabId )
+    {
         return;
     }
-    if( Helper.isMasterUrl(tab.url) )
+    var openerTab = this.getAnElementById(tabInfo.openerTabId);
+    if( !openerTab )
     {
-        this.initTab(tab);
-        this.markAsMasterTab(tab)
+        return;
     }
-    else if( this.isUrlFromMasterTab(tab.url) )
+    if( this.isMasterTab(openerTab) )
     {
-        this.initTab(tab);
-        this.markAsFirstLevelTab(tab);
+        this.dictManagedTabs[tabInfo.id] = {
+            tab     : tabInfo,
+            role    : 'FISRT'
+        };
     }
-    else if( this.isUrlFromFirstLevelTab(tab.url) )
+    else if ( this.isFisrtLevelTab(openerTab) )
     {
-        this.initTab(tab);
-        this.markAsSecondLevelTab(tab);
+        this.dictManagedTabs[tabInfo.id] = {
+            tab     : tabInfo,
+            role    : 'SECOND'
+        };
     }
 };
-TabManager.initTab   = function(tab)
+TabManager.addTab = function(tab){
+    this.updateTab(tab);
+    if( Helper.isMasterUrl(tab.url) )
+    {
+        this.setRole(tab.id, 'MASTER');
+    }
+};
+TabManager.updateTab   = function(tab)
 {
+    if( this.dictManagedTabs[tab.id] )
+    {
+        this.dictManagedTabs[tab.id].tab = tab;
+        return;    
+    }
     this.dictManagedTabs[tab.id] = {
-        tab             : tab,
-        isMasterLevel   : false,
-        isFirstLevel    : false
+        tab     : tab,
+        role    : ''
     };
+};
+TabManager.setRole = function(tabId, ROLE)
+{
+    this.dictManagedTabs[tabId].role = ROLE;
+}
+TabManager.getAnElementById = function(tabId)
+{
+    return this.dictManagedTabs[tabId];
 };
 TabManager.isUrlFromMasterTab = function(url)
 {
@@ -47,22 +72,14 @@ TabManager.isUrlFromMasterTab = function(url)
 TabManager.isUrlFromFirstLevelTab = function(url)
 {
     return !!this.dictFistLevelUrls[url];
-}
-TabManager.markAsMasterTab  = function(tab)
-{
-    this.dictManagedTabs[tab.id].role = 'MASTER';
 };
-TabManager.markAsFirstLevelTab  = function(tab)
+TabManager.isMasterTab = function(openerTab)
 {
-    this.dictManagedTabs[tab.id].isFirstLevel = true;
+    return openerTab.role === 'MASTER';
 };
-TabManager.markAsSecondLevelTab  = function(tab)
+TabManager.isFisrtLevelTab = function(tab)
 {
-    this.dictManagedTabs[tab.id].isMasterLevel = true;
-};
-TabManager.isFromFirstLevel = function(tab)
-{
-    return this.dictManagedTabs[tab.id].isFirstLevel;
+    return openerTab.role === 'FISRT';
 };
 TabManager.isExist = function(tabId)
 {
@@ -104,6 +121,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 });
 chrome.tabs.onCreated.addListener(function(tabInfo) {
     console.log('chrome.tabs.onCreated: ', tabInfo);
+    TabManager.preAddATab(tabInfo);
 });
 
 chrome.tabs.onRemoved.addListener(function(tabId, changeInfo, tab) {
