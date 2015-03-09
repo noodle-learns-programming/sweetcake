@@ -73,13 +73,13 @@ TabManager.isUrlFromFirstLevelTab = function(url)
 {
     return !!this.dictFistLevelUrls[url];
 };
-TabManager.isMasterTab = function(openerTab)
+TabManager.isMasterTab = function(tab)
 {
-    return openerTab.role === 'MASTER';
+    return tab.role === 'MASTER';
 };
 TabManager.isFisrtLevelTab = function(tab)
 {
-    return openerTab.role === 'FISRT';
+    return tab.role === 'FISRT';
 };
 TabManager.isExist = function(tabId)
 {
