@@ -21,6 +21,7 @@ TabManager.preAddATab = function(tabInfo)
     var openerTab = this.getAnElementById(tabInfo.openerTabId);
     if( !openerTab )
     {
+        this.addTab(tab);
         return;
     }
     if( this.isMasterTab(openerTab) )
@@ -40,16 +41,14 @@ TabManager.preAddATab = function(tabInfo)
 };
 TabManager.addTab = function(tab){
     this.updateTab(tab);
-    if( Helper.isMasterUrl(tab.url) )
-    {
-        this.setRole(tab.id, 'MASTER');
-    }
+    this.updateRole(tab);
 };
 TabManager.updateTab   = function(tab)
 {
     if( this.dictManagedTabs[tab.id] )
     {
         this.dictManagedTabs[tab.id].tab = tab;
+        this.updateRole(tab);
         return;    
     }
     this.dictManagedTabs[tab.id] = {
@@ -61,6 +60,13 @@ TabManager.setRole = function(tabId, ROLE)
 {
     this.dictManagedTabs[tabId].role = ROLE;
 }
+TabManager.updateRole = function(tab)
+{
+    if( Helper.isMasterUrl(tab.url) )
+    {
+        this.setRole(tab.id, 'MASTER');
+    }
+};
 TabManager.getAnElementById = function(tabId)
 {
     return this.dictManagedTabs[tabId];
@@ -85,39 +91,27 @@ TabManager.isExist = function(tabId)
 {
     return !!this.dictManagedTabs[tabId];
 };
+TabManager.executeScript = function(tab)
+{
+    chrome.tabs.executeScript(tab.id, { file: "jquery.min.js" }, function(tab) {
+        chrome.tabs.executeScript(tab.id, { file: "main.js" }, function(tab){
+        }.bind(this, tab));
+    }.bind(this, tab));
+};
 
 chrome.tabs.query({}, function(results){
     var tab = null;
     for(var i = 0; i < results.length; i++)
     {
         tab = results[i];
-        if( !Helper.isMasterUrl(tab.url) )
-        {
-            continue;
-        }
-        chrome.tabs.executeScript(tab.id, { file: "jquery.min.js" }, function(tab) {
-            chrome.tabs.executeScript(tab.id, { file: "main.js" }, function(tab){
-                TabManager.addTab(tab);
-            }.bind(this, tab));
-        }.bind(this, tab));
+        TabManager.addTab(tab);
+        TabManager.executeScript(tab);
     }
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    /**
-     |---------------------------------------------------------------------
-     | There are two state: ["upding", "complete"] when the tab is reloaded
-     |---------------------------------------------------------------------
-     */
-    if( TabManager.isExist(tabId) )
-    {
-        return;
-    }
-    chrome.tabs.executeScript(tabId, { file: "jquery.min.js" }, function() {
-        chrome.tabs.executeScript(tabId, { file: "main.js" }, function(){
-            TabManager.addTab(tab);
-        });
-    });
+    TabManager.updateTab(tab);
+    TabManager.executeScript(tab);
 });
 chrome.tabs.onCreated.addListener(function(tabInfo) {
     console.log('chrome.tabs.onCreated: ', tabInfo);
