@@ -16,7 +16,12 @@ TabManager.addTab = function(tab){
     if( this.dictManagedTabs[tab.id] ) {
         return;
     }
-    if( this.isUrlFromMasterTab(tab.url) )
+    if( Helper.isMasterUrl(tab.url) )
+    {
+        this.initTab(tab);
+        this.markAsMasterTab(tab)
+    }
+    else if( this.isUrlFromMasterTab(tab.url) )
     {
         this.initTab(tab);
         this.markAsFirstLevelTab(tab);
@@ -43,6 +48,10 @@ TabManager.isUrlFromFirstLevelTab = function(url)
 {
     return !!this.dictFistLevelUrls[url];
 }
+TabManager.markAsMasterTab  = function(tab)
+{
+    this.dictManagedTabs[tab.id].role = 'MASTER';
+};
 TabManager.markAsFirstLevelTab  = function(tab)
 {
     this.dictManagedTabs[tab.id].isFirstLevel = true;
@@ -59,6 +68,23 @@ TabManager.isExist = function(tabId)
 {
     return !!this.dictManagedTabs[tabId];
 };
+
+chrome.tabs.query({}, function(results){
+    var tab = null;
+    for(var i = 0; i < results.length; i++)
+    {
+        tab = results[i];
+        if( !Helper.isMasterUrl(tab.url) )
+        {
+            continue;
+        }
+        chrome.tabs.executeScript(tab.id, { file: "jquery.min.js" }, function(tab) {
+            chrome.tabs.executeScript(tab.id, { file: "main.js" }, function(tab){
+                TabManager.addTab(tab);
+            }.bind(this, tab));
+        }.bind(this, tab));
+    }
+});
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     /**
