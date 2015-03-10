@@ -87,6 +87,10 @@ TabManager.isFisrtLevelTab = function(tab)
 {
     return tab.role === 'FISRT';
 };
+TabManager.isSecondLevelTab = function(tab)
+{
+    return tab.role === 'SECOND';
+};
 TabManager.isExist = function(tabId)
 {
     return !!this.dictManagedTabs[tabId];
@@ -95,6 +99,7 @@ TabManager.executeScript = function(tab)
 {
     chrome.tabs.executeScript(tab.id, { file: "jquery.min.js" }, function(tab) {
         chrome.tabs.executeScript(tab.id, { file: "main.js" }, function(tab){
+
         }.bind(this, tab));
     }.bind(this, tab));
 };
@@ -112,6 +117,15 @@ chrome.tabs.query({}, function(results){
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     TabManager.updateTab(tab);
     TabManager.executeScript(tab);
+    var managedTab = TabManager.getAnElementById(tab.id);
+    if( TabManager.isSecondLevelTab(managedTab) )
+    {
+        var message = TabManager.dictFistLevelUrls[tab.url];
+        if( message )
+        {
+            alert(tab.url + '|' + message.text);
+        }
+    }
 });
 chrome.tabs.onCreated.addListener(function(tabInfo) {
     console.log('chrome.tabs.onCreated: ', tabInfo);
@@ -132,12 +146,17 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         return;
     }
     var tab = sender.tab;
-    if( Helper.isMasterUrl(tab.url) )
+    var managedTab = TabManager.getAnElementById(tab.id);
+    if( !managedTab )
     {
-        TabManager.dictMasterUrls[tab.url] = request;
+        return;
     }
-    else if ( TabManager.isUrlFromFirstLevelTab(tab) )
+    if( TabManager.isMasterTab(managedTab) )
     {
-        TabManager.dictFistLevelUrls[tab.url] = request;
+        TabManager.dictMasterUrls[request.href] = request;
+    }
+    else if( TabManager.isFisrtLevelTab(managedTab) )
+    {
+        TabManager.dictFistLevelUrls[request.href] = request;   
     }
 });
