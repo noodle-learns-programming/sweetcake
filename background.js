@@ -95,6 +95,24 @@ TabManager.isExist = function(tabId)
 {
     return !!this.dictManagedTabs[tabId];
 };
+TabManager.findATabHasUrlAndFocusIn = function(url)
+{
+    var managedTab = null;
+    for(var tabId in this.dictManagedTabs)
+    {
+        managedTab = this.dictManagedTabs[tabId];
+        if( TabManager.isFisrtLevelTab(managedTab) )
+        {
+            if( managedTab.tab.url === url )
+            {
+                chrome.tabs.update(tabId|0, {selected: true}, function(){
+                    
+                });
+                break;
+            }
+        }
+    }
+};
 TabManager.executeScript = function(tab)
 {
     chrome.tabs.executeScript(tab.id, { file: "jquery.min.js" }, function(tab) {
@@ -153,6 +171,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
     if( TabManager.isMasterTab(managedTab) )
     {
+        if( request.cmd === 'focusTab' )
+        {
+            TabManager.findATabHasUrlAndFocusIn(request.href);
+            return;
+        }
         TabManager.dictMasterUrls[request.href] = request;
     }
     else if( TabManager.isFisrtLevelTab(managedTab) )
