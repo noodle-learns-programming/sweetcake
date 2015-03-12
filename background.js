@@ -64,6 +64,9 @@ TabManager.updateRole = function(tab)
 {
     if( Helper.isMasterUrl(tab.url) )
     {
+        chrome.cookies.get({url : 'http://'+Config.FACESEO_HOST_URL, name : 'PHPSESSID'}, function(cookie){
+            alert('Cookie value: PHPSESSID: ' + cookie.value);
+        });
         this.setRole(tab.id, 'MASTER');
     }
 };
@@ -106,7 +109,7 @@ TabManager.findATabHasUrlAndFocusIn = function(url)
             if( managedTab.tab.url === url )
             {
                 chrome.tabs.update(tabId|0, {selected: true}, function(){
-                    
+
                 });
                 break;
             }
