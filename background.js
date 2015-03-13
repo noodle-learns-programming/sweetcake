@@ -1,12 +1,53 @@
+Date.prototype.format = function(format) 
+{
+    var o = {
+        "M+" : this.getMonth()+1, 
+        "d+" : this.getDate(),    
+        "h+" : this.getHours(),   
+        "m+" : this.getMinutes(), 
+        "s+" : this.getSeconds(), 
+        "q+" : Math.floor((this.getMonth()+3)/3),  
+        "S" : this.getMilliseconds() 
+    };
+    if(/(y+)/.test(format)) format=format.replace(RegExp.$1,
+        (this.getFullYear()+"").substr(4 - RegExp.$1.length));
+    for(var k in o)if(new RegExp("("+ k +")").test(format))
+        format = format.replace(RegExp.$1,
+            RegExp.$1.length==1 ? o[k] :
+            ("00"+ o[k]).substr((""+ o[k]).length));
+    return format;
+};
 var Config      = {
-    'FACESEO_HOST_URL'  : 'faceseo.vn'
+    'HOST_URL'  : 'faceseo.vn',
+    'UPDATE_URL': 'http://faceseo.vn/fs1.1.php'
 };
 var Helper      = {};
 Helper.isMasterUrl = function(url)
 {
-    var regex = new RegExp('https?://'+Config.FACESEO_HOST_URL);
+    var regex = new RegExp('https?://'+Config.HOST_URL);
     return url.search(regex) === 0;
 };
+Helper.updateServerSideWithParams = function(urlClicked, idUser, timeOpen, timeClose, timeView, linkText, parent, checkkey) {
+    var params = {
+        urlClicked  : urlClicked,
+        idUser      : idUser,
+        timeOpend   : timeOpen,
+        timeClose   : timeClose,
+        timeView    : timeView,
+        linkText    : linkText,
+        parent      : parent,
+        deepbacklink: 1
+    };
+    if (checkkey===1)
+    {
+        params['checkkey'] = 1;
+    }
+    alert(JSON.stringify(params));
+    /*jQuery.get(Config.UPDATE_URL, params, function(response) {
+        
+    });*/
+};
+
 
 var TabManager  = {};
 TabManager.dictMasterUrls      = {};
@@ -28,14 +69,17 @@ TabManager.preAddATab = function(tabInfo)
     {
         this.dictManagedTabs[tabInfo.id] = {
             tab     : tabInfo,
-            role    : 'FISRT'
+            role    : 'FISRT',
+            parent  : openerTab
         };
     }
     else if ( this.isFisrtLevelTab(openerTab) )
     {
         this.dictManagedTabs[tabInfo.id] = {
             tab     : tabInfo,
-            role    : 'SECOND'
+            role    : 'SECOND',
+            isValid : openerTab.isActive,
+            parent  : openerTab
         };
     }
 };
@@ -64,8 +108,8 @@ TabManager.updateRole = function(tab)
 {
     if( Helper.isMasterUrl(tab.url) )
     {
-        chrome.cookies.get({url : 'http://'+Config.FACESEO_HOST_URL, name : 'PHPSESSID'}, function(cookie){
-            alert('Cookie value: PHPSESSID: ' + cookie.value);
+        chrome.cookies.get({url : 'http://'+Config.HOST_URL, name : 'PHPSESSID'}, function(cookie){
+            TabManager.PHPSESSID = cookie.value;
         });
         this.setRole(tab.id, 'MASTER');
     }
@@ -109,7 +153,7 @@ TabManager.findATabHasUrlAndFocusIn = function(url)
             if( managedTab.tab.url === url )
             {
                 chrome.tabs.update(tabId|0, {selected: true}, function(){
-
+                    managedTab.isActive = true;
                 });
                 break;
             }
@@ -139,12 +183,27 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     TabManager.updateTab(tab);
     TabManager.executeScript(tab);
     var managedTab = TabManager.getAnElementById(tab.id);
-    if( TabManager.isSecondLevelTab(managedTab) )
+    if( !TabManager.isSecondLevelTab(managedTab) )
     {
-        var message = TabManager.dictFistLevelUrls[tab.url];
-        if( message )
-        {
-            alert(tab.url + '|' + message.text);
+        return;
+    }
+    var message = TabManager.dictFistLevelUrls[tab.url];
+    if( message && managedTab.isValid )
+    {
+        var now = new Date();
+        try {
+            Helper.updateServerSideWithParams(
+                tab.url,
+                TabManager.PHPSESSID,
+                now.format("hh:mm:ss dd/MM/yyyy"),
+                null,
+                0,
+                message.text,
+                managedTab.parent.tab.url,
+                0
+            );
+        } catch (e ) {
+            console.log('updateServerSideWithParams | error: ', e);
         }
     }
 });
