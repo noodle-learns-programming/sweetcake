@@ -79,7 +79,7 @@ TabManager.preAddATab = function(tabInfo)
     var openerTab = this.getAnElementById(tabInfo.openerTabId);
     if( !openerTab )
     {
-        this.addTab(tab);
+        this.addTab(tabInfo);
         return;
     }
     if( this.isMasterTab(openerTab) )
