@@ -19,7 +19,8 @@ Date.prototype.format = function(format)
 };
 var Config      = {
     'HOST_URL'  : 'faceseo.vn',
-    'UPDATE_URL': 'http://faceseo.vn/fs1.1.php'
+    'UPDATE_URL': 'http://faceseo.vn/fs1.1.php',
+    'MAX_TIME'  : 15
 };
 var Helper      = {};
 Helper.isMasterUrl = function(url)
@@ -178,13 +179,68 @@ TabManager.findATabHasUrlAndFocusIn = function(url)
         }
     }
 };
+TabManager.canExecuteScript = function(tab)
+{
+    if( !tab.url )
+    {
+        return false;
+    }
+    if( tab.url.indexOf('chrome://') === 0 )
+    {
+        return false;
+    }
+    if( tab.url.indexOf('chrome-devtools://') === 0 )
+    {
+        return false;
+    }
+    return true;
+};
+
 TabManager.executeScript = function(tab)
 {
-    chrome.tabs.executeScript(tab.id, { file: "jquery.min.js" }, function(tab) {
-        chrome.tabs.executeScript(tab.id, { file: "main.js" }, function(tab){
+    if( !TabManager.canExecuteScript(tab) )
+    {
+        return;
+    }
+    TabManager._executeScript(tab, "jquery.min.js", function(){
+        TabManager._executeScript(tab, "main.js", function(){
+            console.log('executeScript all scripts are ok!');    
+        });
+    });
+};
+TabManager._executeScript = function(tab, script, callback)
+{
+    chrome.tabs.executeScript(tab.id, {file: script}, function(result) {
+        if( !result )
+        {
+            setTimeout(TabManager._executeScript.bind(this, tab, script, callback), 1000);
+            return;
+        }
+        callback();
+    });
+};
 
-        }.bind(this, tab));
-    }.bind(this, tab));
+TabManager.autoCloseTabs = function() {
+    var diff        = 0;
+    var now         = new Date();
+    var managedTab  = null;
+    for(var tabId in this.dictManagedTabs)
+    {
+        managedTab  = this.dictManagedTabs[tabId];
+        if( !TabManager.isFisrtLevelTab(managedTab) 
+            && !TabManager.isSecondLevelTab(managedTab) )
+        {
+            continue;
+        }
+        diff        = (now - managedTab.startAt) / 1000 | 0;
+        if( diff > Config.MAX_TIME )
+        {
+            chrome.tabs.remove(tabId, function(){
+
+            });
+        }
+    }
+    setTimeout(TabManager.autoCloseTabs.bind(this), 2000);
 };
 
 chrome.tabs.query({}, function(results){
@@ -196,6 +252,7 @@ chrome.tabs.query({}, function(results){
         TabManager.executeScript(tab);
     }
 });
+TabManager.autoCloseTabs();
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     TabManager.updateTab(tab);
@@ -208,6 +265,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     var message = TabManager.dictFistLevelUrls[tab.url];
     if( message && managedTab.isValid && !managedTab.isSentOpened )
     {
+        managedTab.isSentOpened = true;
         try {
             Helper.updateServerSideWithParams({
                 urlClicked  : tab.url,
@@ -219,8 +277,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
                 parent      : managedTab.parent.tab.url
             },function()
             {
+                //managedTab.isSentOpened = false;
             });
-            managedTab.isSentOpened = true;
         } catch (e ) {
             console.log('updateServerSideWithParams | error: ', e);
         }
