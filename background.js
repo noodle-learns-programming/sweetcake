@@ -20,7 +20,7 @@ Date.prototype.format = function(format)
 var Config      = {
     'HOST_URL'  : 'faceseo.vn',
     'UPDATE_URL': 'http://faceseo.vn/fs1.1.php',
-    'MAX_TIME'  : 15
+    'MAX_TIME'  : 300
 };
 var Helper      = {};
 Helper.isMasterUrl = function(url)
