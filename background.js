@@ -27,25 +27,41 @@ Helper.isMasterUrl = function(url)
     var regex = new RegExp('https?://'+Config.HOST_URL);
     return url.search(regex) === 0;
 };
-Helper.updateServerSideWithParams = function(urlClicked, idUser, timeOpen, timeClose, timeView, linkText, parent, checkkey) {
+Helper.updateServerSideWithParams = function(options, callback) {
     var params = {
-        urlClicked  : urlClicked,
-        idUser      : idUser,
-        timeOpend   : timeOpen,
-        timeClose   : timeClose,
-        timeView    : timeView,
-        linkText    : linkText,
-        parent      : parent,
+        urlClicked  : options.urlClicked,
+        idUser      : options.idUser,
+        timeOpend   : options.timeOpend,
+        timeClose   : options.timeClose,
+        timeView    : options.timeView,
+        linkText    : options.linkText,
+        parent      : options.parent,
         deepbacklink: 1
     };
-    if (checkkey===1)
+    if (options.checkkey)
     {
-        params['checkkey'] = 1;
+        params['checkkey'] = options.checkkey;
     }
     alert(JSON.stringify(params));
     /*jQuery.get(Config.UPDATE_URL, params, function(response) {
         
     });*/
+};
+
+Helper.remove_unicode = function(str) 
+{  
+    str= str.toLowerCase();  
+    str= str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,"a");  
+    str= str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g,"e");  
+    str= str.replace(/ì|í|ị|ỉ|ĩ/g,"i");  
+    str= str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g,"o");  
+    str= str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u");  
+    str= str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y");  
+    str= str.replace(/đ/g,"d");  
+    str= str.replace(/!|@|%|\^|\*|\(|\)|\+|\=|\<|\>|\?|\/|,|\.|\:|\;|\'|\"|\&|\#|\[|\]|~|$|_/g,"-"); 
+    str= str.replace(/-+-/g,"-");
+    str= str.replace(/^\-+|\-+$/g,""); 
+    return str;  
 };
 
 
@@ -190,20 +206,21 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
         return;
     }
     var message = TabManager.dictFistLevelUrls[tab.url];
-    if( message && managedTab.isValid )
+    if( message && managedTab.isValid && !managedTab.isSentOpened )
     {
-        var now = new Date();
         try {
-            Helper.updateServerSideWithParams(
-                tab.url,
-                TabManager.UIDFACESEO,
-                now.format("hh:mm:ss dd/MM/yyyy"),
-                null,
-                0,
-                message.text,
-                managedTab.parent.tab.url,
-                0
-            );
+            Helper.updateServerSideWithParams({
+                urlClicked  : tab.url,
+                idUser      : TabManager.UIDFACESEO,
+                timeOpend   : managedTab.startAt.format("hh:mm:ss dd/MM/yyyy"),
+                timeClose   : null,
+                timeView    : 0,
+                linkText    : message.text,
+                parent      : managedTab.parent.tab.url
+            },function()
+            {
+            });
+            managedTab.isSentOpened = true;
         } catch (e ) {
             console.log('updateServerSideWithParams | error: ', e);
         }
@@ -232,6 +249,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if( !managedTab )
     {
         return;
+    }
+    if( request.text )
+    {
+        request.text = Helper.remove_unicode(request.text);
     }
     if( TabManager.isMasterTab(managedTab) )
     {
