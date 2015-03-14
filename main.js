@@ -1,4 +1,4 @@
-Helper = {};
+Helper   = {};
 Helper.absoluteUrl = function(url) {
     var img = document.createElement('img');
     img.src = url;
@@ -10,10 +10,10 @@ jQuery(document).ready(function(e){
     jQuery('a').css('color', 'red');
 });
 
-jQuery(document).click(function(e){
-    var $target = $(e.target);
+jQuery('body').on('click', 'a', function(e){
+    var $target = $(this);
     var link = $target.attr('href');
-    if( link.indexOf('@@faceseo@@') !== -1) 
+    if( link && link.indexOf('@@faceseo@@') !== -1) 
     {
         var arrLink1s = link.split('@@faceseo@@');
         if( arrLink1s[1] )
@@ -26,8 +26,15 @@ jQuery(document).click(function(e){
                 //Return here
             });
         }
-        return;
     }
+});
+jQuery('body').on('mouseover', 'a', function(e){
+    var $target = $(this);
+    var link = $target.attr('href');
+    if( link && link.indexOf('@@faceseo@@') >= 0 )
+    {
+        return;
+    } 
     var message = {
         cmd     : 'addLink',
         text    : $target.text(),

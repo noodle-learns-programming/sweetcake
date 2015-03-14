@@ -231,13 +231,32 @@ chrome.tabs.onCreated.addListener(function(tabInfo) {
     TabManager.preAddATab(tabInfo);
 });
 
-chrome.tabs.onRemoved.addListener(function(tabId, changeInfo, tab) {
+chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
     if( !TabManager.dictManagedTabs[tabId] )
     {
         return;
     }
-    TabManager.dictManagedTabs[tabId].tab = null;
-    delete TabManager.dictManagedTabs[tabId];
+    var managedTab = TabManager.getAnElementById(tabId);
+    if( managedTab && managedTab.isSentOpened )
+    {
+        var tab     =  managedTab.tab;
+        var message = TabManager.dictFistLevelUrls[tab.url];
+        var now     = new Date();
+        var diff    = (now - managedTab.startAt) / 1000 | 0;
+        Helper.updateServerSideWithParams({
+            urlClicked  : tab.url,
+            idUser      : TabManager.UIDFACESEO,
+            timeOpend   : managedTab.startAt.format("hh:mm:ss dd/MM/yyyy"),
+            timeClose   : now.format("hh:mm:ss dd/MM/yyyy"),
+            timeView    : diff,
+            linkText    : message.text,
+            parent      : managedTab.parent.tab.url
+        },function()
+        {
+        });
+        TabManager.dictManagedTabs[tabId].tab = null;
+        delete TabManager.dictManagedTabs[tabId];
+    }
 });
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
