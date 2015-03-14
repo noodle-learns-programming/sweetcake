@@ -70,7 +70,8 @@ TabManager.preAddATab = function(tabInfo)
         this.dictManagedTabs[tabInfo.id] = {
             tab     : tabInfo,
             role    : 'FISRT',
-            parent  : openerTab
+            parent  : openerTab,
+            startAt : new Date()
         };
     }
     else if ( this.isFisrtLevelTab(openerTab) )
@@ -79,7 +80,8 @@ TabManager.preAddATab = function(tabInfo)
             tab     : tabInfo,
             role    : 'SECOND',
             isValid : openerTab.isActive,
-            parent  : openerTab
+            parent  : openerTab,
+            startAt : new Date()
         };
     }
 };
