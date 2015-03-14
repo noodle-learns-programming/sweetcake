@@ -235,7 +235,7 @@ TabManager.autoCloseTabs = function() {
         diff        = (now - managedTab.startAt) / 1000 | 0;
         if( diff > Config.MAX_TIME )
         {
-            chrome.tabs.remove(tabId, function(){
+            chrome.tabs.remove(tabId|0, function(){
 
             });
         }
