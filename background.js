@@ -110,8 +110,8 @@ TabManager.updateRole = function(tab)
 {
     if( Helper.isMasterUrl(tab.url) )
     {
-        chrome.cookies.get({url : 'http://'+Config.HOST_URL, name : 'PHPSESSID'}, function(cookie){
-            TabManager.PHPSESSID = cookie.value;
+        chrome.cookies.get({url : 'http://'+Config.HOST_URL, name : 'UIDFACESEO'}, function(cookie){
+            TabManager.UIDFACESEO = cookie.value;
         });
         this.setRole(tab.id, 'MASTER');
     }
@@ -196,7 +196,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
         try {
             Helper.updateServerSideWithParams(
                 tab.url,
-                TabManager.PHPSESSID,
+                TabManager.UIDFACESEO,
                 now.format("hh:mm:ss dd/MM/yyyy"),
                 null,
                 0,
