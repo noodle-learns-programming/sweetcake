@@ -3,7 +3,7 @@
  | To avoid call many times
  |---------------------------------------------------------------------
  */
-//if( window.__FACE_SEO__ ) return;
+//if( window.__FACE_SEO__ ) return false;
 window.__FACE_SEO__ = true;
 /*
  |---------------------------------------------------------------------
@@ -19,7 +19,10 @@ Helper.absoluteUrl = function(url) {
     return url;
 };
 jQuery('a').css('color', 'green');
-jQuery('a').attr('target', '_blank');
+if( location.href && location.href.indexOf('//faceseo.vn') === -1 )
+{
+    jQuery('a').attr('target', '_blank');
+}
 jQuery(document).ready(function(e){
     jQuery('a').css('color', 'red');
 });
