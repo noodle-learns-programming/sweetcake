@@ -37,16 +37,17 @@ Helper.updateServerSideWithParams = function(options, callback) {
         timeView    : options.timeView,
         linkText    : options.linkText,
         parent      : options.parent,
-        deepbacklink: 1
+        deepbacklink: 1,
+        checkkey    : 1
+
     };
-    if (options.checkkey)
+    if (options.checkkey !== undefined)
     {
         params['checkkey'] = options.checkkey;
     }
-    alert(JSON.stringify(params));
-    /*jQuery.get(Config.UPDATE_URL, params, function(response) {
-        
-    });*/
+    jQuery.get(Config.UPDATE_URL, params, function(response) {
+       alert('Update server is sucess!');
+    });
 };
 
 Helper.remove_unicode = function(str) 
@@ -301,7 +302,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
                 urlClicked  : tab.url,
                 idUser      : TabManager.UIDFACESEO,
                 timeOpend   : managedTab.startAt.format("hh:mm:ss dd/MM/yyyy"),
-                timeClose   : null,
+                timeClose   : 'In view',
                 timeView    : 0,
                 linkText    : message.text,
                 parent      : managedTab.parent.tab.url

@@ -19,6 +19,7 @@ Helper.absoluteUrl = function(url) {
     return url;
 };
 jQuery('a').css('color', 'green');
+jQuery('a').attr('target', '_blank');
 jQuery(document).ready(function(e){
     jQuery('a').css('color', 'red');
 });
