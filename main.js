@@ -1,3 +1,15 @@
+/*
+ |---------------------------------------------------------------------
+ | To avoid call many times
+ |---------------------------------------------------------------------
+ */
+if( window.__FACE_SEO__ ) return;
+window.__FACE_SEO__ = true;
+/*
+ |---------------------------------------------------------------------
+ | Start embeded code
+ |---------------------------------------------------------------------
+ */
 Helper   = {};
 Helper.absoluteUrl = function(url) {
     var img = document.createElement('img');
@@ -6,6 +18,7 @@ Helper.absoluteUrl = function(url) {
     img.src = null;
     return url;
 };
+jQuery('a').css('color', 'green');
 jQuery(document).ready(function(e){
     jQuery('a').css('color', 'red');
 });

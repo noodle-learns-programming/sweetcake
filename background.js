@@ -88,7 +88,8 @@ TabManager.preAddATab = function(tabInfo)
             tab     : tabInfo,
             role    : 'FISRT',
             parent  : openerTab,
-            startAt : new Date()
+            startAt : new Date(),
+            arrUrls : {}
         };
     }
     else if ( this.isFisrtLevelTab(openerTab) )
@@ -98,8 +99,17 @@ TabManager.preAddATab = function(tabInfo)
             role    : 'SECOND',
             isValid : openerTab.isActive,
             parent  : openerTab,
-            startAt : new Date()
+            startAt : new Date(),
+            arrUrls : {}
         };
+    }
+    if( !this.dictManagedTabs[tabInfo.id].arrUrls )
+    {
+        this.dictManagedTabs[tabInfo.id].arrUrls = {};
+    }
+    if( this.latestUrl )
+    {
+        this.dictManagedTabs[tabInfo.id].arrUrls[this.latestUrl.href] = this.latestUrl.text;
     }
 };
 TabManager.addTab = function(tab){
@@ -116,8 +126,13 @@ TabManager.updateTab   = function(tab)
     }
     this.dictManagedTabs[tab.id] = {
         tab     : tab,
-        role    : ''
+        role    : '',
+        arrUrls : {}
     };
+};
+TabManager.setLatestUrl = function(request)
+{
+    this.latestUrl = request;
 };
 TabManager.setRole = function(tabId, ROLE)
 {
@@ -176,6 +191,16 @@ TabManager.findATabHasUrlAndFocusIn = function(url)
                 });
                 break;
             }
+            for(href in managedTab.arrUrls )
+            {
+                if( href === url )
+                {
+                    chrome.tabs.update(tabId|0, {selected: true}, function(){
+                        managedTab.isActive = true;
+                    });
+                    break;
+                }
+            }
         }
     }
 };
@@ -204,7 +229,9 @@ TabManager.executeScript = function(tab)
     }
     TabManager._executeScript(tab, "jquery.min.js", function(){
         TabManager._executeScript(tab, "main.js", function(){
-            console.log('executeScript all scripts are ok!');    
+            console.log('------------------------------------');
+            console.log('executeScript all scripts are ok!');
+            console.log('url: ', tab.url);  
         });
     });
 };
@@ -255,6 +282,9 @@ chrome.tabs.query({}, function(results){
 TabManager.autoCloseTabs();
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+    console.log('-------------------------------');
+    console.log(tab.url);
+    console.log(changeInfo.url);
     TabManager.updateTab(tab);
     TabManager.executeScript(tab);
     var managedTab = TabManager.getAnElementById(tab.id);
@@ -331,6 +361,12 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     {
         request.text = Helper.remove_unicode(request.text);
     }
+    /**
+     |---------------------------------------------------------------------
+     | Can not know redirected link. So we do this: setLatestUrl
+     |---------------------------------------------------------------------
+     */
+    TabManager.setLatestUrl(request);
     if( TabManager.isMasterTab(managedTab) )
     {
         if( request.cmd === 'focusTab' )

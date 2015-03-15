@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "Sweetcake",
-    "description": "This extension testes Google extension",
+    "description": "Faceseo - Chrome extension © Copyright 2013 Giải Pháp Thương Hiệu",
     "version": "1.0",
     "icons": {
       "16": "icon16.png",
@@ -14,7 +14,7 @@
     },
     "background" : {
       "scripts": [ "jquery.min.js", "background.js" ],
-      "persistent": false
+      "persistent": true
     },
     "permissions": [
       "background",
