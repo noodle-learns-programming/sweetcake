@@ -86,7 +86,8 @@ TabManager.preAddATab = function(tabInfo)
             role    : 'FISRT',
             parent  : openerTab,
             startAt : new Date(),
-            arrUrls : {}
+            arrUrls : {},
+            iNumberTabOpened : 0
         };
     }
     else if ( this.isFisrtLevelTab(openerTab) )
@@ -97,7 +98,8 @@ TabManager.preAddATab = function(tabInfo)
             isValid : openerTab.isActive,
             parent  : openerTab,
             startAt : new Date(),
-            arrUrls : {}
+            arrUrls : {},
+            iNumberTabOpened : 0
         };
     }
     if( !this.dictManagedTabs[tabInfo.id].arrUrls )
@@ -290,6 +292,15 @@ TabManager.checkTheTabIsOpen = function(url)
     }
     return false;
 };
+TabManager.checkOpenTabTooMuch = function(openerTabId)
+{
+   var managedTab = this.dictManagedTabs[openerTabId];
+   if( managedTab && managedTab.iNumberTabOpened >= 5)
+   {
+        return true;
+   }
+   return false;
+};
 
 chrome.tabs.query({}, function(results){
     var tab = null;
@@ -414,6 +425,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 sendResponse({status: 0, mgs: 'Tab này đang được mở.'});
                 return;
             }
+            if( TabManager.checkOpenTabTooMuch(sender.tab.id) )
+            {
+                sendResponse({status: 0, mgs: 'Bạn đã mở nhiều hơn 5 tab.'});
+                return;
+            }
+            var openerTab = TabManager.getAnElementById(sender.tab.id);
+            openerTab.iNumberTabOpened++;
             TabManager.openerTabId = sender.tab.id;
             chrome.tabs.create({
                 url         : request.href,
