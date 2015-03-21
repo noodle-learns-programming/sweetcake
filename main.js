@@ -26,7 +26,6 @@ Helper.isMasterTab = function()
     }
     return false;
 };
-var arrOpenTabs = {};
 jQuery('a').css('color', 'green');
 if( !Helper.isMasterTab() )
 {
@@ -62,17 +61,14 @@ jQuery('body').on('click', 'a', function(e){
     {
         e.preventDefault();
         e.stopImmediatePropagation();
-        if( arrOpenTabs[link] )
-        {
-            alert('Tab này đang được mở.');
-            return false;
-        }
-        arrOpenTabs[link] = true;
         chrome.runtime.sendMessage({
             'cmd'     : 'openTab',
-            'href'    : link
+            'href'    : Helper.absoluteUrl(link)
         }, function(response) {
-            //Return here
+            if( response.status === 0 )
+            {
+                alert(response.mgs);
+            }
         });
         return false;
     }

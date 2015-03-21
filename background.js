@@ -266,6 +266,30 @@ TabManager.autoCloseTabs = function() {
     }
     setTimeout(TabManager.autoCloseTabs.bind(this), 2000);
 };
+TabManager.checkTheTabIsOpen = function(url)
+{
+    var managedTab = null;
+    for(var tabId in this.dictManagedTabs)
+    {
+        managedTab = this.dictManagedTabs[tabId];
+        if( !TabManager.isSecondLevelTab(managedTab) )
+        {
+            continue;
+        }
+        if( managedTab.tab.url === url )
+        {
+            return true;
+        }
+        for(href in managedTab.arrUrls )
+        {
+            if( href === url )
+            {
+               return true;
+            }
+        }
+    }
+    return false;
+};
 
 chrome.tabs.query({}, function(results){
     var tab = null;
@@ -314,6 +338,11 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
 });
 chrome.tabs.onCreated.addListener(function(tabInfo) {
     console.log('chrome.tabs.onCreated: ', tabInfo);
+    if( !tabInfo.openerTabId )
+    {
+        tabInfo.openerTabId = TabManager.openerTabId;
+        TabManager.openerTabId = 0;
+    }
     TabManager.preAddATab(tabInfo);
 });
 
@@ -380,11 +409,21 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         TabManager.dictFistLevelUrls[request.href] = request;   
         if( request.cmd === 'openTab' )
         {
+            if( TabManager.checkTheTabIsOpen(request.href) )
+            {
+                sendResponse({status: 0, mgs: 'Tab này đang được mở.'});
+                return;
+            }
+            TabManager.openerTabId = sender.tab.id;
             chrome.tabs.create({
-                url     : request.href,
-                active  : false
+                url         : request.href,
+                active      : false,
+                openerTabId : sender.tab.id
             }, function(tab){
                 //open new tab in silent mode
+                //dont know why can not call back here
+                tab.openerTabId = sender.tab.id;
+                TabManager.openerTabId = sender.tab.id;
             });
         }
     }
