@@ -20,7 +20,8 @@ Date.prototype.format = function(format)
 var Config      = {
     'HOST_URL'  : 'faceseo.vn',
     'UPDATE_URL': 'http://faceseo.vn/fs1.1.php',
-    'MAX_TIME'  : 300
+    'MAX_TIME'  : 420,
+    'MIN_TIME'  : 300
 };
 var Helper      = {};
 Helper.isMasterUrl = function(url)
@@ -248,18 +249,19 @@ TabManager._executeScript = function(tab, script, callback)
 
 TabManager.autoCloseTabs = function() {
     var diff        = 0;
+    var timeToClose = 0;
     var now         = new Date();
     var managedTab  = null;
     for(var tabId in this.dictManagedTabs)
     {
         managedTab  = this.dictManagedTabs[tabId];
-        if( !TabManager.isFisrtLevelTab(managedTab) 
-            && !TabManager.isSecondLevelTab(managedTab) )
+        if( !TabManager.isSecondLevelTab(managedTab) )
         {
             continue;
         }
         diff        = (now - managedTab.startAt) / 1000 | 0;
-        if( diff > Config.MAX_TIME )
+        timeToClose = Math.floor(Math.random() * (Config.MAX_TIME - Config.MIN_TIME)) + Config.MIN_TIME;
+        if( diff > timeToClose )
         {
             chrome.tabs.remove(tabId|0, function(){
 
