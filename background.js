@@ -38,13 +38,9 @@ Helper.updateServerSideWithParams = function(options, callback) {
         linkText    : options.linkText,
         parent      : options.parent,
         deepbacklink: 1,
-        checkkey    : 1
+        checkkey    : options.checkkey || 0
 
     };
-    if (options.checkkey !== undefined)
-    {
-        params['checkkey'] = options.checkkey;
-    }
     jQuery.get(Config.UPDATE_URL, params, function(response) {
        alert('Update server is sucess!');
     });
@@ -294,7 +290,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
         return;
     }
     var message = TabManager.dictFistLevelUrls[tab.url];
-    if( message && managedTab.isValid && !managedTab.isSentOpened )
+    if( message && !managedTab.isSentOpened )
     {
         managedTab.isSentOpened = true;
         try {
@@ -305,7 +301,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
                 timeClose   : 'In view',
                 timeView    : 0,
                 linkText    : message.text,
-                parent      : managedTab.parent.tab.url
+                parent      : managedTab.parent.tab.url,
+                checkkey    : managedTab.isValid
             },function()
             {
                 //managedTab.isSentOpened = false;
@@ -339,7 +336,8 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
             timeClose   : now.format("hh:mm:ss dd/MM/yyyy"),
             timeView    : diff,
             linkText    : message.text,
-            parent      : managedTab.parent.tab.url
+            parent      : managedTab.parent.tab.url,
+            checkkey    : managedTab.isValid
         },function()
         {
         });
@@ -380,5 +378,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     else if( TabManager.isFisrtLevelTab(managedTab) )
     {
         TabManager.dictFistLevelUrls[request.href] = request;   
+        if( request.cmd === 'openTab' )
+        {
+            chrome.tabs.create({
+                url     : request.href,
+                active  : false
+            }, function(tab){
+                //open new tab in silent mode
+            });
+        }
     }
 });

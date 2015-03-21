@@ -18,8 +18,17 @@ Helper.absoluteUrl = function(url) {
     img.src = null;
     return url;
 };
+Helper.isMasterTab = function()
+{
+    if( location.href && location.href.indexOf('//faceseo.vn') >= 3 )
+    {
+        return true;
+    }
+    return false;
+};
+
 jQuery('a').css('color', 'green');
-if( location.href && location.href.indexOf('//faceseo.vn') === -1 )
+if( !Helper.isMasterTab() )
 {
     jQuery('a').attr('target', '_blank');
 }
@@ -30,7 +39,11 @@ jQuery(document).ready(function(e){
 jQuery('body').on('click', 'a', function(e){
     var $target = $(this);
     var link = $target.attr('href');
-    if( link && link.indexOf('@@faceseo@@') !== -1) 
+    if( !link )
+    {
+        return;
+    }
+    if( link.indexOf('@@faceseo@@') !== -1) 
     {
         var arrLink1s = link.split('@@faceseo@@');
         if( arrLink1s[1] )
@@ -43,6 +56,19 @@ jQuery('body').on('click', 'a', function(e){
                 //Return here
             });
         }
+        return;
+    }
+    if( !Helper.isMasterTab() )
+    {
+        chrome.runtime.sendMessage({
+            'cmd'     : 'openTab',
+            'href'    : link
+        }, function(response) {
+            //Return here
+        });
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
     }
 });
 jQuery('body').on('mouseover', 'a', function(e){
