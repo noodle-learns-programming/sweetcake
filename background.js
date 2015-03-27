@@ -19,7 +19,7 @@ Date.prototype.format = function(format)
 };
 var Config      = {
     'HOST_URL'  : 'faceseo.vn',
-    'UPDATE_URL': 'http://faceseo.vn/fs1.1.php',
+    'UPDATE_URL': 'http://faceseo.vn/fs1.3.php',
     'MAX_TIME'  : 420,
     'MIN_TIME'  : 300
 };
@@ -38,7 +38,7 @@ Helper.updateServerSideWithParams = function(options, callback) {
         timeView    : options.timeView,
         linkText    : options.linkText,
         parent      : options.parent,
-        deepbacklink: 1,
+        deepbacklink: options.deepbacklink || 0,
         checkkey    : options.checkkey || 0
 
     };
@@ -137,7 +137,7 @@ TabManager.setLatestUrl = function(request)
 TabManager.setRole = function(tabId, ROLE)
 {
     this.dictManagedTabs[tabId].role = ROLE;
-}
+};
 TabManager.updateRole = function(tab)
 {
     if( Helper.isMasterUrl(tab.url) )
@@ -176,9 +176,10 @@ TabManager.isExist = function(tabId)
 {
     return !!this.dictManagedTabs[tabId];
 };
-TabManager.findATabHasUrlAndFocusIn = function(url)
+TabManager.findATabHasUrlAndFocusIn = function(request)
 {
-    var managedTab = null;
+    var url         = request.url;
+    var managedTab  = null;
     for(var tabId in this.dictManagedTabs)
     {
         managedTab = this.dictManagedTabs[tabId];
@@ -187,6 +188,7 @@ TabManager.findATabHasUrlAndFocusIn = function(url)
             if( managedTab.tab.url === url )
             {
                 chrome.tabs.update(tabId|0, {selected: true}, function(){
+                    managedTab.keyword  = request.keyword;
                     managedTab.isActive = true;
                 });
                 break;
@@ -196,6 +198,7 @@ TabManager.findATabHasUrlAndFocusIn = function(url)
                 if( href === url )
                 {
                     chrome.tabs.update(tabId|0, {selected: true}, function(){
+                        managedTab.keyword  = request.keyword;
                         managedTab.isActive = true;
                     });
                     break;
@@ -330,6 +333,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     if( message && !managedTab.isSentOpened )
     {
         managedTab.isSentOpened = true;
+        var parentTab   = managedTab.parent;
+        var checkkey    = (parentTab.keyword || '').search(message.text) >= 0 ? 1 : 0;
         try {
             Helper.updateServerSideWithParams({
                 urlClicked  : tab.url,
@@ -338,8 +343,9 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
                 timeClose   : 'In view',
                 timeView    : 0,
                 linkText    : message.text,
-                parent      : managedTab.parent.tab.url,
-                checkkey    : managedTab.isValid
+                parent      : parentTab.tab.url,
+                deepbacklink: managedTab.isValid,
+                checkkey    : checkkey
             },function()
             {
                 //managedTab.isSentOpened = false;
@@ -367,10 +373,12 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
     var managedTab = TabManager.getAnElementById(tabId);
     if( managedTab && managedTab.isSentOpened )
     {
-        var tab     =  managedTab.tab;
-        var message = TabManager.dictFistLevelUrls[tab.url];
-        var now     = new Date();
-        var diff    = (now - managedTab.startAt) / 1000 | 0;
+        var tab         = managedTab.tab;
+        var message     = TabManager.dictFistLevelUrls[tab.url];
+        var now         = new Date();
+        var diff        = (now - managedTab.startAt) / 1000 | 0;
+        var parentTab   = managedTab.parent;
+        var checkkey    = (parentTab.keyword || '').search(message.text) >= 0 ? 1 : 0;
         Helper.updateServerSideWithParams({
             urlClicked  : tab.url,
             idUser      : TabManager.UIDFACESEO,
@@ -378,8 +386,9 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
             timeClose   : now.format("hh:mm:ss dd/MM/yyyy"),
             timeView    : diff,
             linkText    : message.text,
-            parent      : managedTab.parent.tab.url,
-            checkkey    : managedTab.isValid
+            parent      : parentTab.tab.url,
+            deepbacklink: managedTab.isValid,
+            checkkey    : checkkey
         },function()
         {
         });
@@ -412,7 +421,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     {
         if( request.cmd === 'focusTab' )
         {
-            TabManager.findATabHasUrlAndFocusIn(request.href);
+            TabManager.findATabHasUrlAndFocusIn(request);
             return;
         }
         TabManager.dictMasterUrls[request.href] = request;

@@ -50,7 +50,8 @@ jQuery('body').on('click', 'a', function(e){
             var arrLink2s = arrLink1s[1].split('###');
             chrome.runtime.sendMessage({
                 'cmd'     : 'focusTab',
-                'href'    : arrLink2s[0]
+                'href'    : arrLink2s[0],
+                'keyword' : arrLink2s[1]
             }, function(response) {
                 //Return here
             });
@@ -83,7 +84,7 @@ jQuery('body').on('mouseover', 'a', function(e){
     var message = {
         cmd     : 'addLink',
         text    : $target.text(),
-        href    : Helper.absoluteUrl($target.attr('href')),
+        href    : Helper.absoluteUrl($target.attr('href'))
     };
     chrome.runtime.sendMessage(message, function(response) {
     });
