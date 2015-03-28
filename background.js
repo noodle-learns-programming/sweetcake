@@ -21,7 +21,8 @@ var Config      = {
     'HOST_URL'  : 'faceseo.vn',
     'UPDATE_URL': 'http://faceseo.vn/fs1.3.php',
     'MAX_TIME'  : 420,
-    'MIN_TIME'  : 300
+    'MIN_TIME'  : 300,
+    'isDebug'   : false
 };
 var Helper      = {};
 Helper.isMasterUrl = function(url)
@@ -43,7 +44,9 @@ Helper.updateServerSideWithParams = function(options, callback) {
 
     };
     jQuery.get(Config.UPDATE_URL, params, function(response) {
-       alert('Update server is sucess!');
+        if( Config.isDebug ) {
+            alert('Update server is sucess!');
+        }
     });
 };
 
@@ -178,7 +181,7 @@ TabManager.isExist = function(tabId)
 };
 TabManager.findATabHasUrlAndFocusIn = function(request)
 {
-    var url         = request.url;
+    var url         = request.href;
     var managedTab  = null;
     for(var tabId in this.dictManagedTabs)
     {
@@ -188,17 +191,17 @@ TabManager.findATabHasUrlAndFocusIn = function(request)
             if( managedTab.tab.url === url )
             {
                 chrome.tabs.update(tabId|0, {selected: true}, function(){
-                    managedTab.keyword  = request.keyword;
+                    managedTab.keyword  = Helper.remove_unicode(request.keyword);
                     managedTab.isActive = true;
                 });
                 break;
             }
-            for(href in managedTab.arrUrls )
+            for(var href in managedTab.arrUrls )
             {
                 if( href === url )
                 {
                     chrome.tabs.update(tabId|0, {selected: true}, function(){
-                        managedTab.keyword  = request.keyword;
+                        managedTab.keyword  = Helper.remove_unicode(request.keyword);
                         managedTab.isActive = true;
                     });
                     break;

@@ -10,6 +10,8 @@ window.__FACE_SEO__ = true;
  | Start embeded code
  |---------------------------------------------------------------------
  */
+Config   = {};
+Config.isDebug = false;
 Helper   = {};
 Helper.absoluteUrl = function(url) {
     var img = document.createElement('img');
@@ -26,13 +28,18 @@ Helper.isMasterTab = function()
     }
     return false;
 };
-jQuery('a').css('color', 'green');
+if( Config.isDebug ) {
+    jQuery('a').css('color', 'green');
+}
 if( !Helper.isMasterTab() )
 {
     jQuery('a').attr('target', '_blank');
 }
 jQuery(document).ready(function(e){
-    jQuery('a').css('color', 'red');
+    if( Config.isDebug ) {
+        jQuery('a').css('color', 'red');
+    }
+    $('#numpoint').css('color', 'red');
 });
 
 jQuery('body').on('click', 'a', function(e){
