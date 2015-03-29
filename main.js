@@ -71,6 +71,7 @@ jQuery('body').on('click', 'a', function(e){
         e.stopImmediatePropagation();
         chrome.runtime.sendMessage({
             'cmd'     : 'openTab',
+            'text'    : $target.text(),
             'href'    : Helper.absoluteUrl(link)
         }, function(response) {
             if( response.status === 0 )

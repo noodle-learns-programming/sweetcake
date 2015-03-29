@@ -31,6 +31,7 @@ Helper.isMasterUrl = function(url)
     return url.search(regex) === 0;
 };
 Helper.updateServerSideWithParams = function(options, callback) {
+    console.log('updateServerSideWithParams:', options);
     var params = {
         urlClicked  : options.urlClicked,
         idUser      : options.idUser,
@@ -105,6 +106,11 @@ TabManager.preAddATab = function(tabInfo)
             arrUrls : {},
             iNumberTabOpened : 0
         };
+    }
+    if( !this.dictManagedTabs[tabInfo.id] )
+    {
+        console.log('Ops! Why can not get dictManagedTabs of tab:', tabInfo.id);
+        return false;
     }
     if( !this.dictManagedTabs[tabInfo.id].arrUrls )
     {
@@ -235,9 +241,9 @@ TabManager.executeScript = function(tab)
     }
     TabManager._executeScript(tab, "jquery.min.js", function(){
         TabManager._executeScript(tab, "main.js", function(){
-            console.log('------------------------------------');
-            console.log('executeScript all scripts are ok!');
-            console.log('url: ', tab.url);  
+            //console.log('------------------------------------');
+            //console.log('executeScript all scripts are ok!');
+            //console.log('url: ', tab.url);  
         });
     });
 };
@@ -270,7 +276,7 @@ TabManager.autoCloseTabs = function() {
         if( diff > timeToClose )
         {
             chrome.tabs.remove(tabId|0, function(){
-
+                return true;
             });
         }
     }
@@ -322,9 +328,6 @@ chrome.tabs.query({}, function(results){
 TabManager.autoCloseTabs();
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    console.log('-------------------------------');
-    console.log(tab.url);
-    console.log(changeInfo.url);
     TabManager.updateTab(tab);
     TabManager.executeScript(tab);
     var managedTab = TabManager.getAnElementById(tab.id);
