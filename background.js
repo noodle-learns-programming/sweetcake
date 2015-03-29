@@ -31,7 +31,6 @@ Helper.isMasterUrl = function(url)
     return url.search(regex) === 0;
 };
 Helper.updateServerSideWithParams = function(options, callback) {
-    console.log('updateServerSideWithParams:', options);
     var params = {
         urlClicked  : options.urlClicked,
         idUser      : options.idUser,
@@ -44,6 +43,7 @@ Helper.updateServerSideWithParams = function(options, callback) {
         checkkey    : options.checkkey || 0
 
     };
+    console.log('updateServerSideWithParams:', params, options);
     jQuery.get(Config.UPDATE_URL, params, function(response) {
         if( Config.isDebug ) {
             alert('Update server is sucess!');
