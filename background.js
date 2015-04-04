@@ -19,9 +19,11 @@ Date.prototype.format = function(format)
 };
 var Config      = {
     'HOST_URL'  : 'faceseo.vn',
-    'UPDATE_URL': 'http://faceseo.vn/fs1.3.php',
-    'MAX_TIME'  : 420,
-    'MIN_TIME'  : 300,
+    'UPDATE_URL': 'http://faceseo.vn/fs1.4.php',
+    'MAX_TIME'  : 180,
+    'MIN_TIME'  : 120,
+    'MAX_LVL_1' : 5,
+    'MAX_LVL_2' : 2,
     'isDebug'   : false
 };
 var Helper      = {};
@@ -29,6 +31,14 @@ Helper.isMasterUrl = function(url)
 {
     var regex = new RegExp('https?://'+Config.HOST_URL);
     return url.search(regex) === 0;
+};
+Helper.isMatchedBetweenTwo = function(str1, str2)
+{
+    if( str1.search(str2) >= 0 || str2.search(str1) >= 0 )
+    {
+        return true;
+    }
+    return false;
 };
 Helper.updateServerSideWithParams = function(options, callback) {
     var params = {
@@ -39,11 +49,10 @@ Helper.updateServerSideWithParams = function(options, callback) {
         timeView    : options.timeView,
         linkText    : options.linkText,
         parent      : options.parent,
-        deepbacklink: options.deepbacklink || 0,
-        checkkey    : options.checkkey || 0
+        deepbacklink: options.deepbacklink ? 1 : 0,
+        checkkey    : options.checkkey ? 1 : 0
 
     };
-    console.log('updateServerSideWithParams:', params, options);
     jQuery.get(Config.UPDATE_URL, params, function(response) {
         if( Config.isDebug ) {
             alert('Update server is sucess!');
@@ -69,8 +78,8 @@ Helper.remove_unicode = function(str)
 
 
 var TabManager  = {};
-TabManager.dictMasterUrls      = {};
-TabManager.dictFistLevelUrls    = {};
+TabManager.dictMasterUrls       = {};
+TabManager.dictOpenedLevelUrls  = {};
 TabManager.dictManagedTabs      = {};
 TabManager.preAddATab = function(tabInfo)
 {
@@ -101,6 +110,18 @@ TabManager.preAddATab = function(tabInfo)
             tab     : tabInfo,
             role    : 'SECOND',
             isValid : openerTab.isActive,
+            parent  : openerTab,
+            startAt : new Date(),
+            arrUrls : {},
+            iNumberTabOpened : 0
+        };
+    }
+    else if ( this.isSecondLevelTab(openerTab) )
+    {
+        this.dictManagedTabs[tabInfo.id] = {
+            tab     : tabInfo,
+            role    : 'THIRD',
+            isValid : openerTab.isValid || openerTab.isActive,
             parent  : openerTab,
             startAt : new Date(),
             arrUrls : {},
@@ -165,10 +186,6 @@ TabManager.isUrlFromMasterTab = function(url)
 {
     return !!this.dictMasterUrls[url];
 };
-TabManager.isUrlFromFirstLevelTab = function(url)
-{
-    return !!this.dictFistLevelUrls[url];
-};
 TabManager.isMasterTab = function(tab)
 {
     return tab.role === 'MASTER';
@@ -181,6 +198,10 @@ TabManager.isSecondLevelTab = function(tab)
 {
     return tab.role === 'SECOND';
 };
+TabManager.isThirdLevelTab = function(tab)
+{
+    return tab.role === 'THIRD';
+};
 TabManager.isExist = function(tabId)
 {
     return !!this.dictManagedTabs[tabId];
@@ -192,7 +213,7 @@ TabManager.findATabHasUrlAndFocusIn = function(request)
     for(var tabId in this.dictManagedTabs)
     {
         managedTab = this.dictManagedTabs[tabId];
-        if( TabManager.isFisrtLevelTab(managedTab) )
+        if( TabManager.isFisrtLevelTab(managedTab) || TabManager.isSecondLevelTab(managedTab) )
         {
             if( managedTab.tab.url === url )
             {
@@ -267,7 +288,7 @@ TabManager.autoCloseTabs = function() {
     for(var tabId in this.dictManagedTabs)
     {
         managedTab  = this.dictManagedTabs[tabId];
-        if( !TabManager.isSecondLevelTab(managedTab) )
+        if( !TabManager.isSecondLevelTab(managedTab) && !TabManager.isThirdLevelTab(managedTab) )
         {
             continue;
         }
@@ -288,7 +309,7 @@ TabManager.checkTheTabIsOpen = function(url)
     for(var tabId in this.dictManagedTabs)
     {
         managedTab = this.dictManagedTabs[tabId];
-        if( !TabManager.isSecondLevelTab(managedTab) )
+        if( !TabManager.isSecondLevelTab(managedTab) && !TabManager.isThirdLevelTab(managedTab) )
         {
             continue;
         }
@@ -309,9 +330,16 @@ TabManager.checkTheTabIsOpen = function(url)
 TabManager.checkOpenTabTooMuch = function(openerTabId)
 {
    var managedTab = this.dictManagedTabs[openerTabId];
-   if( managedTab && managedTab.iNumberTabOpened >= 5)
+   if( managedTab )
    {
-        return true;
+        if( TabManager.isFisrtLevelTab(managedTab) && managedTab.iNumberTabOpened >= Config.MAX_LVL_1 )
+        {
+            return Config.MAX_LVL_1;
+        }
+        if( TabManager.isSecondLevelTab(managedTab) && managedTab.iNumberTabOpened >= Config.MAX_LVL_2)
+        {
+            return Config.MAX_LVL_2;
+        }
    }
    return false;
 };
@@ -331,16 +359,17 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     TabManager.updateTab(tab);
     TabManager.executeScript(tab);
     var managedTab = TabManager.getAnElementById(tab.id);
-    if( !TabManager.isSecondLevelTab(managedTab) )
+    if( !TabManager.isSecondLevelTab(managedTab) && !TabManager.isThirdLevelTab(managedTab) )
     {
         return;
     }
-    var message = TabManager.dictFistLevelUrls[tab.url];
+    var message = TabManager.dictOpenedLevelUrls[tab.url];
     if( message && !managedTab.isSentOpened )
     {
         managedTab.isSentOpened = true;
         var parentTab   = managedTab.parent;
-        var checkkey    = (parentTab.keyword || '').search(message.text) >= 0 ? 1 : 0;
+        var checkkey    = Helper.isMatchedBetweenTwo(parentTab.keyword || '', message.text);
+        var parent      = parentTab.tab && parentTab.tab.url ? parentTab.tab.url : '';
         try {
             Helper.updateServerSideWithParams({
                 urlClicked  : tab.url,
@@ -349,7 +378,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
                 timeClose   : 'In view',
                 timeView    : 0,
                 linkText    : message.text,
-                parent      : parentTab.tab.url,
+                parent      : parent,
                 deepbacklink: managedTab.isValid,
                 checkkey    : checkkey
             },function()
@@ -362,7 +391,6 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     }
 });
 chrome.tabs.onCreated.addListener(function(tabInfo) {
-    console.log('chrome.tabs.onCreated: ', tabInfo);
     if( !tabInfo.openerTabId )
     {
         tabInfo.openerTabId = TabManager.openerTabId;
@@ -376,15 +404,16 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
     {
         return;
     }
-    var managedTab = TabManager.getAnElementById(tabId);
+    var managedTab  = TabManager.getAnElementById(tabId);
+    var parentTab   = managedTab.parent;
     if( managedTab && managedTab.isSentOpened )
     {
         var tab         = managedTab.tab;
-        var message     = TabManager.dictFistLevelUrls[tab.url];
+        var message     = TabManager.dictOpenedLevelUrls[tab.url];
         var now         = new Date();
         var diff        = (now - managedTab.startAt) / 1000 | 0;
-        var parentTab   = managedTab.parent;
-        var checkkey    = (parentTab.keyword || '').search(message.text) >= 0 ? 1 : 0;
+        var checkkey    = Helper.isMatchedBetweenTwo(parentTab.keyword || '', message.text);
+        var parent      = parentTab.tab && parentTab.tab.url ? parentTab.tab.url : '';
         Helper.updateServerSideWithParams({
             urlClicked  : tab.url,
             idUser      : TabManager.UIDFACESEO,
@@ -392,7 +421,7 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
             timeClose   : now.format("hh:mm:ss dd/MM/yyyy"),
             timeView    : diff,
             linkText    : message.text,
-            parent      : parentTab.tab.url,
+            parent      : parent,
             deepbacklink: managedTab.isValid,
             checkkey    : checkkey
         },function()
@@ -400,6 +429,9 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
         });
         TabManager.dictManagedTabs[tabId].tab = null;
         delete TabManager.dictManagedTabs[tabId];
+    }
+    if( parentTab ) {
+        parentTab.iNumberTabOpened--;
     }
 });
 
@@ -432,9 +464,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         }
         TabManager.dictMasterUrls[request.href] = request;
     }
-    else if( TabManager.isFisrtLevelTab(managedTab) )
+    else if( TabManager.isFisrtLevelTab(managedTab) || TabManager.isSecondLevelTab(managedTab) )
     {
-        TabManager.dictFistLevelUrls[request.href] = request;   
+        TabManager.dictOpenedLevelUrls[request.href] = request;   
         if( request.cmd === 'openTab' )
         {
             if( TabManager.checkTheTabIsOpen(request.href) )
@@ -442,9 +474,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 sendResponse({status: 0, mgs: 'Tab này đang được mở.'});
                 return;
             }
-            if( TabManager.checkOpenTabTooMuch(sender.tab.id) )
+            var iNumberTabOpened = TabManager.checkOpenTabTooMuch(sender.tab.id);
+            if( iNumberTabOpened )
             {
-                sendResponse({status: 0, mgs: 'Bạn đã mở nhiều hơn 5 tab.'});
+                sendResponse({status: 0, mgs: 'Bạn đã mở nhiều hơn '+iNumberTabOpened+' tab.'});
                 return;
             }
             var openerTab = TabManager.getAnElementById(sender.tab.id);
@@ -460,6 +493,18 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 tab.openerTabId = sender.tab.id;
                 TabManager.openerTabId = sender.tab.id;
             });
+            return;
         }
+    }
+    if( request.cmd === 'openTab' )
+    {
+        chrome.tabs.create({
+            url         : request.href,
+            active      : true,
+            openerTabId : sender.tab.id
+        }, function(tab){
+            //Open tab for user
+        });
+        return;
     }
 });
