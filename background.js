@@ -20,8 +20,8 @@ Date.prototype.format = function(format)
 var Config      = {
     'HOST_URL'  : 'faceseo.vn',
     'UPDATE_URL': 'http://faceseo.vn/fs1.4.php',
-    'MAX_TIME'  : 180,
-    'MIN_TIME'  : 120,
+    'MAX_TIME'  : 320,
+    'MIN_TIME'  : 180,
     'MAX_LVL_1' : 5,
     'MAX_LVL_2' : 2,
     'isDebug'   : false
@@ -217,20 +217,24 @@ TabManager.findATabHasUrlAndFocusIn = function(request)
         {
             if( managedTab.tab.url === url )
             {
-                chrome.tabs.update(tabId|0, {selected: true}, function(){
-                    managedTab.keyword  = Helper.remove_unicode(request.keyword);
-                    managedTab.isActive = true;
-                });
+                try {
+                    chrome.tabs.update(tabId|0, {selected: true}, function(){
+                        managedTab.keyword  = Helper.remove_unicode(request.keyword);
+                        managedTab.isActive = true;
+                    });
+                } catch ( e) { }
                 break;
             }
             for(var href in managedTab.arrUrls )
             {
                 if( href === url )
                 {
-                    chrome.tabs.update(tabId|0, {selected: true}, function(){
-                        managedTab.keyword  = Helper.remove_unicode(request.keyword);
-                        managedTab.isActive = true;
-                    });
+                    try {
+                        chrome.tabs.update(tabId|0, {selected: true}, function(){
+                            managedTab.keyword  = Helper.remove_unicode(request.keyword);
+                            managedTab.isActive = true;
+                        });
+                    } catch ( e ) { }
                     break;
                 }
             }
@@ -288,17 +292,19 @@ TabManager.autoCloseTabs = function() {
     for(var tabId in this.dictManagedTabs)
     {
         managedTab  = this.dictManagedTabs[tabId];
-        if( !TabManager.isSecondLevelTab(managedTab) && !TabManager.isThirdLevelTab(managedTab) )
-        {
+        if( !TabManager.isSecondLevelTab(managedTab) && !TabManager.isThirdLevelTab(managedTab) ) {
             continue;
         }
         diff        = (now - managedTab.startAt) / 1000 | 0;
         timeToClose = Math.floor(Math.random() * (Config.MAX_TIME - Config.MIN_TIME)) + Config.MIN_TIME;
-        if( diff > timeToClose )
-        {
-            chrome.tabs.remove(tabId|0, function(){
-                return true;
-            });
+        if( diff > timeToClose ) {
+            try {
+                chrome.tabs.remove(tabId|0, function(){
+                    return true;
+                });
+            } catch (e) {
+                delete this.dictManagedTabs[tabId];
+            }
         }
     }
     setTimeout(TabManager.autoCloseTabs.bind(this), 2000);
@@ -466,9 +472,18 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
     else if( TabManager.isFisrtLevelTab(managedTab) || TabManager.isSecondLevelTab(managedTab) )
     {
-        TabManager.dictOpenedLevelUrls[request.href] = request;   
+        TabManager.dictOpenedLevelUrls[request.href] = request;
         if( request.cmd === 'openTab' )
         {
+            var openerTab = TabManager.getAnElementById(sender.tab.id);
+            //Should update keyword here for level 2! Ugly!
+            if( TabManager.isSecondLevelTab(openerTab) ) {
+                if( openerTab.parent && openerTab.parent.keyword ) {
+                    openerTab.keyword = openerTab.parent.keyword;
+                } else {
+                    openerTab.keyword = request.text;
+                }
+            }
             if( TabManager.checkTheTabIsOpen(request.href) )
             {
                 sendResponse({status: 0, mgs: 'Tab này đang được mở.'});
@@ -480,7 +495,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 sendResponse({status: 0, mgs: 'Bạn đã mở nhiều hơn '+iNumberTabOpened+' tab.'});
                 return;
             }
-            var openerTab = TabManager.getAnElementById(sender.tab.id);
             openerTab.iNumberTabOpened++;
             TabManager.openerTabId = sender.tab.id;
             chrome.tabs.create({
