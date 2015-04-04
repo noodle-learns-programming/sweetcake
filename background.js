@@ -20,8 +20,8 @@ Date.prototype.format = function(format)
 var Config      = {
     'HOST_URL'  : 'faceseo.vn',
     'UPDATE_URL': 'http://faceseo.vn/fs1.4.php',
-    'MAX_TIME'  : 320,
-    'MIN_TIME'  : 180,
+    'MAX_TIME'  : 420,
+    'MIN_TIME'  : 300,
     'MAX_LVL_1' : 5,
     'MAX_LVL_2' : 2,
     'isDebug'   : false
