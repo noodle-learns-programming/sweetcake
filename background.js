@@ -263,6 +263,9 @@ TabManager.findATabHasUrlAndFocusIn = function(request)
                                 managedTab.keyword.push(Helper.remove_unicode(arrKeywords[i]));
                             }
                             managedTab.isActive = true;
+                            chrome.tabs.executeScript({
+                                code: 'Helper.highlight('+JSON.stringify(managedTab.keyword)+')'
+                            });
                         });
                     } catch (e) {
                         console.log('findATabHasUrlAndFocusIn | err:', e);
@@ -282,6 +285,9 @@ TabManager.findATabHasUrlAndFocusIn = function(request)
                                     managedTab.keyword.push(Helper.remove_unicode(arrKeywords[i]));
                                 }
                                 managedTab.isActive = true;
+                                chrome.tabs.executeScript({
+                                    code: 'Helper.highlight('+JSON.stringify(managedTab.keyword)+')'
+                                });
                             });
                         } catch (e) {
                             console.log('findATabHasUrlAndFocusIn | err:', e);
