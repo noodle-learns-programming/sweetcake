@@ -44,6 +44,21 @@ Helper.isMatchedBetweenTwo = function(str1, str2)
     }
     return false;
 };
+Helper.isMatchKeywords = function(keywords, str) {
+    var isResult = false;
+    if( keywords instanceof Array )
+    {
+        for(var i = 0; i < keywords.length; i++){
+            if( this.isMatchedBetweenTwo(keywords[i], str) ){
+                isResult = true;
+                break;
+            }
+        }
+    } else {
+        isResult = this.isMatchedBetweenTwo(keywords, str);
+    }
+    return isResult;
+};
 Helper.updateServerSideWithParams = function(options, callback) {
     var params = {
         urlClicked  : options.urlClicked,
@@ -54,7 +69,7 @@ Helper.updateServerSideWithParams = function(options, callback) {
         linkText    : options.linkText,
         parent      : options.parent,
         deepbacklink: options.deepbacklink ? 1 : 0,
-        checkkey    : (options.deepbacklink ? 1 : 0) || (options.checkkey ? 1 : 0)
+        checkkey    : !options.deepbacklink ? 0 : (options.checkkey ? 1 : 0)
 
     };
     jQuery.get(Config.UPDATE_URL, params, function(response) {
@@ -80,6 +95,11 @@ Helper.remove_unicode = function(str)
     return str;  
 };
 
+Helper.isGoogleTab = function(tab)
+{
+    var regex = new RegExp('https?://(www\.)?google\.com');
+    return tab.url.search(regex) === 0;
+};
 
 var TabManager  = {};
 TabManager.dictMasterUrls       = {};
@@ -175,7 +195,7 @@ TabManager.setRole = function(tabId, ROLE)
 TabManager.getFirstLevelParentTab = function(tabId)
 {
     var managedTab = this.getAnElementById(tabId);
-    if( managedTab.parent && managedTab.parent.parent )
+    if ( this.isThirdLevelTab(managedTab) )
     {
         return managedTab.parent.parent;
     }
@@ -221,38 +241,58 @@ TabManager.isExist = function(tabId)
 };
 TabManager.findATabHasUrlAndFocusIn = function(request)
 {
-    var url         = request.href;
-    var managedTab  = null;
-    for(var tabId in this.dictManagedTabs)
-    {
-        managedTab = this.dictManagedTabs[tabId];
-        if( TabManager.isFisrtLevelTab(managedTab) || TabManager.isSecondLevelTab(managedTab) )
+    chrome.tabs.query({}, function (results) {
+        var url         = request.href;
+        var managedTab  = null;
+        var _tab = null;
+        var tabId= null;
+        for (var i = 0; i < results.length; i++)
         {
-            if( managedTab.tab.url === url )
+            _tab = results[i];
+            tabId= _tab.id;
+            managedTab = this.dictManagedTabs[tabId];
+            if (TabManager.isFisrtLevelTab(managedTab) || TabManager.isSecondLevelTab(managedTab))
             {
-                try {
-                    chrome.tabs.update(tabId|0, {selected: true}, function(){
-                        managedTab.keyword  = Helper.remove_unicode(request.keyword);
-                        managedTab.isActive = true;
-                    });
-                } catch ( e) { }
-                break;
-            }
-            for(var href in managedTab.arrUrls )
-            {
-                if( href === url )
+                if (managedTab.tab.url === url)
                 {
                     try {
-                        chrome.tabs.update(tabId|0, {selected: true}, function(){
-                            managedTab.keyword  = Helper.remove_unicode(request.keyword);
+                        chrome.tabs.update(tabId | 0, {selected: true}, function () {
+                            managedTab.keyword = [];
+                            var arrKeywords = request.keyword.split(',');
+                            for (var i = 0; i < arrKeywords.length; i++)
+                            {
+                                managedTab.keyword.push(Helper.remove_unicode(arrKeywords[i]));
+                            }
                             managedTab.isActive = true;
                         });
-                    } catch ( e ) { }
+                    } catch (e) {
+                        console.log('findATabHasUrlAndFocusIn | err:', e);
+                    }
                     break;
+                }
+                for (var href in managedTab.arrUrls)
+                {
+                    if (href === url)
+                    {
+                        try {
+                            chrome.tabs.update(tabId | 0, {selected: true}, function () {
+                                managedTab.keyword = [];
+                                var arrKeywords = request.keyword.split(',');
+                                for (var i = 0; i < arrKeywords.length; i++)
+                                {
+                                    managedTab.keyword.push(Helper.remove_unicode(arrKeywords[i]));
+                                }
+                                managedTab.isActive = true;
+                            });
+                        } catch (e) {
+                            console.log('findATabHasUrlAndFocusIn | err:', e);
+                        }
+                        break;
+                    }
                 }
             }
         }
-    }
+    }.bind(this));
 };
 TabManager.canExecuteScript = function(tab)
 {
@@ -313,7 +353,7 @@ TabManager.autoCloseTabs = function() {
         if( diff > timeToClose ) {
             try {
                 chrome.tabs.remove(tabId|0, function(){
-                    return true;
+                    delete this.dictManagedTabs[tabId];
                 });
             } catch (e) {
                 delete this.dictManagedTabs[tabId];
@@ -362,7 +402,24 @@ TabManager.checkOpenTabTooMuch = function(openerTabId)
    }
    return false;
 };
-
+TabManager.validateOpenFromGoogleTab = function(openerTab, request)
+{
+    var managedTab = this.getAnElementById(openerTab.tab.id);
+    if( !managedTab ) {
+        console.log('Khong tim thay openerTab! Omg!');
+        return true;
+    }
+    var asciiLink  = Helper.remove_unicode(request.href);
+    var textLink   = request.text;//It's already converted to ascii
+    var arrKeyword = managedTab.arrUrls ? Object.keys(managedTab.arrUrls) : [];
+        arrKeyword.push(managedTab.tab.url);
+        if( managedTab.keyword instanceof Array ) {
+            Array.prototype.push.apply(arrKeyword, managedTab.keyword);
+        }
+    var isResult    = Helper.isMatchKeywords(arrKeyword, asciiLink)
+                    || Helper.isMatchKeywords(arrKeyword, textLink);
+    return isResult;
+};
 chrome.tabs.query({}, function(results){
     var tab = null;
     for(var i = 0; i < results.length; i++)
@@ -386,8 +443,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     if( message && !managedTab.isSentOpened )
     {
         managedTab.isSentOpened = true;
-        var parentTab   = managedTab.getFirstLevelParentTab(tab.id);
-        var checkkey    = Helper.isMatchedBetweenTwo(parentTab.keyword, message.text);
+        var parentTab   = TabManager.getFirstLevelParentTab(tab.id);
+        var checkkey    = Helper.isMatchKeywords(parentTab.keyword, message.text);
         var parent      = parentTab.tab && parentTab.tab.url ? parentTab.tab.url : '';
         try {
             Helper.updateServerSideWithParams({
@@ -431,7 +488,7 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
         var message     = TabManager.dictOpenedLevelUrls[tab.url];
         var now         = new Date();
         var diff        = (now - managedTab.startAt) / 1000 | 0;
-        var checkkey    = Helper.isMatchedBetweenTwo(parentTab.keyword, message.text);
+        var checkkey    = Helper.isMatchKeywords(parentTab.keyword, message.text);
         var parent      = parentTab.tab && parentTab.tab.url ? parentTab.tab.url : '';
         Helper.updateServerSideWithParams({
             urlClicked  : tab.url,
@@ -490,12 +547,17 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         {
             var openerTab = TabManager.getAnElementById(sender.tab.id);
             //Should update keyword here for level 2! Ugly!
-            if( TabManager.isSecondLevelTab(openerTab) ) {
+            /*if( TabManager.isSecondLevelTab(openerTab) ) {
                 if( openerTab.parent && openerTab.parent.keyword ) {
                     openerTab.keyword = openerTab.parent.keyword;
                 } else {
                     openerTab.keyword = request.text;
                 }
+            }*/
+            if( Helper.isGoogleTab(sender) && !TabManager.validateOpenFromGoogleTab(sender, request) )
+            {
+                sendResponse({status: 0, mgs: 'Bạn click sai domain hoặc chưa click link nháy nháy.'});
+                return;
             }
             if( TabManager.checkTheTabIsOpen(request.href) )
             {
