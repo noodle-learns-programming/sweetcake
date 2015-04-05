@@ -332,8 +332,11 @@ TabManager.executeScript = function(tab)
 };
 TabManager._executeScript = function(tab, script, callback)
 {
+    if( !callback.__loop__ === undefined) {
+        callback.__loop__ = 0;
+    }
     chrome.tabs.executeScript(tab.id, {file: script}, function(result) {
-        if( !result )
+        if( !result && ++callback.__loop__ < 3)
         {
             setTimeout(TabManager._executeScript.bind(this, tab, script, callback), 1000);
             return;
@@ -403,6 +406,22 @@ TabManager.checkTheTabIsOpen = function(url)
     }
     return false;
 };
+TabManager.pickAPirorityUrl = function(managedTab)
+{
+    if(managedTab.arrUrls)
+    {
+        var arrUrls = Object.keys(managedTab.arrUrls);
+        if( arrUrls && arrUrls.length )
+        {
+            return arrUrls[0];
+        }
+    }
+    if( !managedTab.tab )
+    {
+        return '';
+    }
+    return managedTab.tab.url || '';
+};
 TabManager.checkOpenTabTooMuch = function(openerTabId)
 {
    var managedTab = this.dictManagedTabs[openerTabId];
@@ -456,13 +475,14 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     {
         return;
     }
-    var message = TabManager.dictOpenedLevelUrls[tab.url];
+    //Thiet la eo le ma. Khong hieu tai sao co thang lai goi ca co /
+    var message = TabManager.dictOpenedLevelUrls[tab.url] || TabManager.dictOpenedLevelUrls[tab.url+'/'];
     if( message && !managedTab.isSentOpened )
     {
         managedTab.isSentOpened = true;
         var parentTab   = TabManager.getFirstLevelParentTab(tab.id);
         var checkkey    = Helper.isMatchKeywords(parentTab.keyword, message.text);
-        var parent      = parentTab.tab && parentTab.tab.url ? parentTab.tab.url : '';
+        var parentUrl   = TabManager.pickAPirorityUrl(parentTab);
         try {
             Helper.updateServerSideWithParams({
                 urlClicked  : tab.url,
@@ -471,7 +491,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
                 timeClose   : 'In view',
                 timeView    : 0,
                 linkText    : message.text,
-                parent      : parent,
+                parent      : parentUrl,
                 deepbacklink: parentTab.isActive,
                 checkkey    : checkkey
             },function()
@@ -506,7 +526,7 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
         var now         = new Date();
         var diff        = (now - managedTab.startAt) / 1000 | 0;
         var checkkey    = Helper.isMatchKeywords(parentTab.keyword, message.text);
-        var parent      = parentTab.tab && parentTab.tab.url ? parentTab.tab.url : '';
+        var parentUrl   = TabManager.pickAPirorityUrl(parentTab);
         Helper.updateServerSideWithParams({
             urlClicked  : tab.url,
             idUser      : TabManager.UIDFACESEO,
@@ -514,7 +534,7 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
             timeClose   : now.format("hh:mm:ss dd/MM/yyyy"),
             timeView    : diff,
             linkText    : message.text,
-            parent      : parent,
+            parent      : parentUrl,
             deepbacklink: parentTab.isActive,
             checkkey    : checkkey
         },function()
