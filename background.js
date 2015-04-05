@@ -34,6 +34,10 @@ Helper.isMasterUrl = function(url)
 };
 Helper.isMatchedBetweenTwo = function(str1, str2)
 {
+    if( !str1 || !str2 )
+    {
+        return false;
+    }
     if( str1.search(str2) >= 0 || str2.search(str1) >= 0 )
     {
         return true;
@@ -50,7 +54,7 @@ Helper.updateServerSideWithParams = function(options, callback) {
         linkText    : options.linkText,
         parent      : options.parent,
         deepbacklink: options.deepbacklink ? 1 : 0,
-        checkkey    : options.checkkey ? 1 : 0
+        checkkey    : (options.deepbacklink ? 1 : 0) || (options.checkkey ? 1 : 0)
 
     };
     jQuery.get(Config.UPDATE_URL, params, function(response) {
@@ -167,6 +171,15 @@ TabManager.setLatestUrl = function(request)
 TabManager.setRole = function(tabId, ROLE)
 {
     this.dictManagedTabs[tabId].role = ROLE;
+};
+TabManager.getFirstLevelParentTab = function(tabId)
+{
+    var managedTab = this.getAnElementById(tabId);
+    if( managedTab.parent && managedTab.parent.parent )
+    {
+        return managedTab.parent.parent;
+    }
+    return managedTab.parent;
 };
 TabManager.updateRole = function(tab)
 {
@@ -373,8 +386,8 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     if( message && !managedTab.isSentOpened )
     {
         managedTab.isSentOpened = true;
-        var parentTab   = managedTab.parent;
-        var checkkey    = Helper.isMatchedBetweenTwo(parentTab.keyword || '', message.text);
+        var parentTab   = managedTab.getFirstLevelParentTab(tab.id);
+        var checkkey    = Helper.isMatchedBetweenTwo(parentTab.keyword, message.text);
         var parent      = parentTab.tab && parentTab.tab.url ? parentTab.tab.url : '';
         try {
             Helper.updateServerSideWithParams({
@@ -411,14 +424,14 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
         return;
     }
     var managedTab  = TabManager.getAnElementById(tabId);
-    var parentTab   = managedTab.parent;
+    var parentTab   = TabManager.getFirstLevelParentTab(tabId);
     if( managedTab && managedTab.isSentOpened )
     {
         var tab         = managedTab.tab;
         var message     = TabManager.dictOpenedLevelUrls[tab.url];
         var now         = new Date();
         var diff        = (now - managedTab.startAt) / 1000 | 0;
-        var checkkey    = Helper.isMatchedBetweenTwo(parentTab.keyword || '', message.text);
+        var checkkey    = Helper.isMatchedBetweenTwo(parentTab.keyword, message.text);
         var parent      = parentTab.tab && parentTab.tab.url ? parentTab.tab.url : '';
         Helper.updateServerSideWithParams({
             urlClicked  : tab.url,

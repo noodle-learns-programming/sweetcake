@@ -28,6 +28,14 @@ Helper.isMasterTab = function()
     }
     return false;
 };
+Helper.checkIsImageLink = function($element)
+{
+    if( $element.is('a') && $element.find('img').length )
+    {
+        return true;
+    }
+    return false;
+};
 if( Config.isDebug ) {
     jQuery('a').css('color', 'green');
 }
@@ -69,9 +77,14 @@ jQuery('body').on('click', 'a', function(e){
     {
         e.preventDefault();
         e.stopImmediatePropagation();
+        var text = $target.text();
+        if( Helper.checkIsImageLink($target) )
+        {
+            text = 'View image';
+        }
         chrome.runtime.sendMessage({
             'cmd'     : 'openTab',
-            'text'    : $target.text(),
+            'text'    : text,
             'href'    : Helper.absoluteUrl(link)
         }, function(response) {
             if( response.status === 0 )
@@ -88,10 +101,15 @@ jQuery('body').on('mouseover', 'a', function(e){
     if( link && link.indexOf('@@faceseo@@') >= 0 )
     {
         return;
-    } 
+    }
+    var text = $target.text();
+    if( Helper.checkIsImageLink($target) )
+    {
+        text = 'View image';
+    }
     var message = {
         cmd     : 'addLink',
-        text    : $target.text(),
+        text    : text,
         href    : Helper.absoluteUrl($target.attr('href'))
     };
     chrome.runtime.sendMessage(message, function(response) {
