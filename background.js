@@ -313,6 +313,10 @@ TabManager.canExecuteScript = function(tab)
     {
         return false;
     }
+    if( tab.url.indexOf('data:') === 0 )
+    {
+        return false;
+    }
     return true;
 };
 
