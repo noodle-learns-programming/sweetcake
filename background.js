@@ -66,7 +66,7 @@ Helper.updateServerSideWithParams = function(options, callback) {
         timeOpend   : options.timeOpend,
         timeClose   : options.timeClose,
         timeView    : options.timeView,
-        linkText    : options.linkText,
+        linkText    : $.trim(options.linkText || ''),
         parent      : options.parent,
         deepbacklink: options.deepbacklink ? 1 : 0,
         checkkey    : !options.deepbacklink ? 0 : (options.checkkey ? 1 : 0)
@@ -91,7 +91,7 @@ Helper.remove_unicode = function(str)
     str= str.replace(/đ/g,"d");  
     str= str.replace(/!|@|%|\^|\*|\(|\)|\+|\=|\<|\>|\?|\/|,|\.|\:|\;|\'|\"|\&|\#|\[|\]|~|$|_/g,"-"); 
     str= str.replace(/-+-/g,"-");
-    str= str.replace(/^\-+|\-+$/g,""); 
+    str= str.replace(/^\-+|\-+$»/g,""); 
     return str;  
 };
 
@@ -248,25 +248,26 @@ TabManager.findATabHasUrlAndFocusIn = function(request)
         for (var i = 0; i < results.length; i++)
         {
             _tab = results[i];
-            tabId= _tab.id;
+            tabId= _tab.id | 0;
             managedTab = this.dictManagedTabs[tabId];
             if (TabManager.isFisrtLevelTab(managedTab) || TabManager.isSecondLevelTab(managedTab))
             {
                 if (managedTab.tab.url === url)
                 {
                     try {
-                        chrome.tabs.update(tabId | 0, {selected: true}, function () {
+                        chrome.tabs.update(tabId, {selected: true}, function (tabId, managedTab) {
                             managedTab.keyword = [];
-                            var arrKeywords = request.keyword.split(',');
+                            var arrKeywords = request.keyword.split(/[,|;]/g);
                             for (var i = 0; i < arrKeywords.length; i++)
                             {
+                                arrKeywords[i] = arrKeywords[i].replace(/\s+/g, ' ');
                                 managedTab.keyword.push(Helper.remove_unicode(arrKeywords[i]));
                             }
                             managedTab.isActive = true;
-                            chrome.tabs.executeScript({
+                            chrome.tabs.executeScript(tabId, {
                                 code: 'Helper.highlight('+JSON.stringify(managedTab.keyword)+')'
                             });
-                        });
+                        }.bind(this, tabId, managedTab));
                     } catch (e) {
                         console.log('findATabHasUrlAndFocusIn | err:', e);
                     }
@@ -277,18 +278,19 @@ TabManager.findATabHasUrlAndFocusIn = function(request)
                     if (href === url)
                     {
                         try {
-                            chrome.tabs.update(tabId | 0, {selected: true}, function () {
+                            chrome.tabs.update(tabId, {selected: true}, function () {
                                 managedTab.keyword = [];
-                                var arrKeywords = request.keyword.split(',');
+                                var arrKeywords = request.keyword.split(/[,|;]/g);
                                 for (var i = 0; i < arrKeywords.length; i++)
                                 {
+                                    arrKeywords[i] = arrKeywords[i].replace(/\s+/g, ' ');
                                     managedTab.keyword.push(Helper.remove_unicode(arrKeywords[i]));
                                 }
                                 managedTab.isActive = true;
-                                chrome.tabs.executeScript({
+                                chrome.tabs.executeScript(tabId, {
                                     code: 'Helper.highlight('+JSON.stringify(managedTab.keyword)+')'
                                 });
-                            });
+                            }.bind(this, tabId, managedTab));
                         } catch (e) {
                             console.log('findATabHasUrlAndFocusIn | err:', e);
                         }
@@ -328,9 +330,14 @@ TabManager.executeScript = function(tab)
     }
     TabManager._executeScript(tab, "jquery.min.js", function(){
         TabManager._executeScript(tab, "main.js", function(){
-            //console.log('------------------------------------');
-            //console.log('executeScript all scripts are ok!');
-            //console.log('url: ', tab.url);  
+            var managedTab = TabManager.getAnElementById(tab.id);
+            if( TabManager.isSecondLevelTab(managedTab) )
+            {
+                var keyword = managedTab.parent.keyword || [];
+                chrome.tabs.executeScript(managedTab.tab.id, {
+                    code: 'Helper.highlight('+JSON.stringify(keyword)+')'
+                });
+            }
         });
     });
 };
