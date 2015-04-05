@@ -125,6 +125,7 @@ TabManager.preAddATab = function(tabInfo)
             parent  : openerTab,
             startAt : new Date(),
             arrUrls : {},
+            isActive: false,
             iNumberTabOpened : 0
         };
     }
@@ -133,7 +134,6 @@ TabManager.preAddATab = function(tabInfo)
         this.dictManagedTabs[tabInfo.id] = {
             tab     : tabInfo,
             role    : 'SECOND',
-            isValid : openerTab.isActive,
             parent  : openerTab,
             startAt : new Date(),
             arrUrls : {},
@@ -145,7 +145,6 @@ TabManager.preAddATab = function(tabInfo)
         this.dictManagedTabs[tabInfo.id] = {
             tab     : tabInfo,
             role    : 'THIRD',
-            isValid : openerTab.isValid || openerTab.isActive,
             parent  : openerTab,
             startAt : new Date(),
             arrUrls : {},
@@ -338,29 +337,41 @@ TabManager._executeScript = function(tab, script, callback)
 };
 
 TabManager.autoCloseTabs = function() {
-    var diff        = 0;
-    var timeToClose = 0;
-    var now         = new Date();
-    var managedTab  = null;
-    for(var tabId in this.dictManagedTabs)
-    {
-        managedTab  = this.dictManagedTabs[tabId];
-        if( !TabManager.isSecondLevelTab(managedTab) && !TabManager.isThirdLevelTab(managedTab) ) {
-            continue;
+    chrome.tabs.query({}, function (results) {
+        var dictValidTab    = {};
+        var _tab  = null;
+        for(var i = 0; i < results.length; i++)
+        {
+            _tab = results[i];
+            dictValidTab[_tab.id] = _tab;
         }
-        diff        = (now - managedTab.startAt) / 1000 | 0;
-        timeToClose = Math.floor(Math.random() * (Config.MAX_TIME - Config.MIN_TIME)) + Config.MIN_TIME;
-        if( diff > timeToClose ) {
-            try {
-                chrome.tabs.remove(tabId|0, function(){
-                    delete this.dictManagedTabs[tabId];
-                });
-            } catch (e) {
+        var diff        = 0;
+        var timeToClose = 0;
+        var now         = new Date();
+        var managedTab  = null;
+        for(var tabId in this.dictManagedTabs)
+        {
+            if( !dictValidTab[tabId] ) {
                 delete this.dictManagedTabs[tabId];
+                continue;
+            }
+            managedTab  = this.dictManagedTabs[tabId];
+            if( !TabManager.isSecondLevelTab(managedTab) && !TabManager.isThirdLevelTab(managedTab) ) {
+                continue;
+            }
+            diff        = (now - managedTab.startAt) / 1000 | 0;
+            timeToClose = Math.floor(Math.random() * (Config.MAX_TIME - Config.MIN_TIME)) + Config.MIN_TIME;
+            if( diff > timeToClose ) {
+                try {
+                    chrome.tabs.remove(tabId|0, function(){
+                    });
+                } catch (e) {
+                    delete this.dictManagedTabs[tabId];
+                }
             }
         }
-    }
-    setTimeout(TabManager.autoCloseTabs.bind(this), 2000);
+    }.bind(this));
+    setTimeout(TabManager.autoCloseTabs.bind(this), 5000);
 };
 TabManager.checkTheTabIsOpen = function(url)
 {
@@ -455,7 +466,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
                 timeView    : 0,
                 linkText    : message.text,
                 parent      : parent,
-                deepbacklink: managedTab.isValid,
+                deepbacklink: parentTab.isActive,
                 checkkey    : checkkey
             },function()
             {
@@ -498,7 +509,7 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
             timeView    : diff,
             linkText    : message.text,
             parent      : parent,
-            deepbacklink: managedTab.isValid,
+            deepbacklink: parentTab.isActive,
             checkkey    : checkkey
         },function()
         {
