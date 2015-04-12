@@ -125,11 +125,12 @@ jQuery('body').on('click', 'a', function(e){
         var arrLink1s = link.split('@@faceseo@@');
         if( arrLink1s[1] )
         {
-            var arrLink2s = arrLink1s[1].split('###');
+            var arrLink2s   = arrLink1s[1].split('###');
+            var keyword     = arrLink2s[1].replace('!!!', '');
             chrome.runtime.sendMessage({
                 'cmd'     : 'focusTab',
                 'href'    : arrLink2s[0],
-                'keyword' : arrLink2s[1]
+                'keyword' : keyword
             }, function(response) {
                 //Return here
             });
