@@ -94,6 +94,7 @@ Helper.highlight = function(keywords)
         }
         text = Helper.remove_unicode(text);
         text = text.replace(/\s+/g, ' ');
+        text = $.trim(text);
         if( Helper.isMatchKeywords(keywords, text) )
         {
             $(this).css('color', 'white');
