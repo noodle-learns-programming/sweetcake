@@ -88,6 +88,10 @@ Helper.highlight = function(keywords)
         {
             return;
         }
+        if( location.host.search('google.com') )
+        {
+            text += (',' + $(this).data('href'));
+        }
         text = Helper.remove_unicode(text);
         text = text.replace(/\s+/g, ' ');
         if( Helper.isMatchKeywords(keywords, text) )
@@ -141,15 +145,21 @@ jQuery('body').on('click', 'a', function(e){
     {
         e.preventDefault();
         e.stopImmediatePropagation();
-        var text = $target.text();
+        var text        = $target.text();
+        var originMgs   = text;
+        if( location.host.search('google.com') )
+        {
+            text += (',' + $(this).data('href'));
+        }
         if( Helper.checkIsImageLink($target) )
         {
             text = 'View image';
         }
         chrome.runtime.sendMessage({
-            'cmd'     : 'openTab',
-            'text'    : text,
-            'href'    : Helper.absoluteUrl(link)
+            'cmd'       : 'openTab',
+            'text'      : text,
+            'originMgs' : originMgs,
+            'href'      : Helper.absoluteUrl(link)
         }, function(response) {
             if( response.status === 0 )
             {
@@ -166,15 +176,21 @@ jQuery('body').on('mouseover', 'a', function(e){
     {
         return;
     }
-    var text = $target.text();
+    var text        = $target.text();
+    var originMgs   = text;
+    if( location.host.search('google.com') )
+    {
+        text += (',' + $(this).data('href'));
+    }
     if( Helper.checkIsImageLink($target) )
     {
         text = 'View image';
     }
     var message = {
-        cmd     : 'addLink',
-        text    : text,
-        href    : Helper.absoluteUrl($target.attr('href'))
+        cmd         : 'addLink',
+        text        : text,
+        originMgs   : originMgs,
+        href        : Helper.absoluteUrl($target.attr('href'))
     };
     chrome.runtime.sendMessage(message, function(response) {
     });

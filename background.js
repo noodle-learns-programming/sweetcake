@@ -91,7 +91,8 @@ Helper.remove_unicode = function(str)
     str= str.replace(/đ/g,"d");  
     str= str.replace(/!|@|%|\^|\*|\(|\)|\+|\=|\<|\>|\?|\/|,|\.|\:|\;|\'|\"|\&|\#|\[|\]|~|\$|_/g,"-"); 
     str= str.replace(/-+-/g,"-");
-    str= str.replace(/^\-+|\-+$»/g,""); 
+    str= str.replace(/^\-+|\-+$»/g,"");
+    str= $.trim(str);
     return str;  
 };
 
@@ -278,7 +279,7 @@ TabManager.findATabHasUrlAndFocusIn = function(request)
                     if (href === url)
                     {
                         try {
-                            chrome.tabs.update(tabId, {selected: true}, function () {
+                            chrome.tabs.update(tabId, {selected: true}, function (tabId, managedTab) {
                                 managedTab.keyword = [];
                                 var arrKeywords = request.keyword.split(/[,|;]/g);
                                 for (var i = 0; i < arrKeywords.length; i++)
@@ -501,7 +502,7 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
                 timeOpend   : managedTab.startAt.format("hh:mm:ss dd/MM/yyyy"),
                 timeClose   : 'In view',
                 timeView    : 0,
-                linkText    : message.text,
+                linkText    : message.originMgs || message.text,
                 parent      : parentUrl,
                 deepbacklink: parentTab.isActive,
                 checkkey    : checkkey
@@ -544,7 +545,7 @@ chrome.tabs.onRemoved.addListener(function(tabId, changeInfo) {
             timeOpend   : managedTab.startAt.format("hh:mm:ss dd/MM/yyyy"),
             timeClose   : now.format("hh:mm:ss dd/MM/yyyy"),
             timeView    : diff,
-            linkText    : message.text,
+            linkText    : message.originMgs || message.text,
             parent      : parentUrl,
             deepbacklink: parentTab.isActive,
             checkkey    : checkkey
@@ -568,6 +569,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if( !managedTab )
     {
         return;
+    }
+    if( !request.originMgs )
+    {
+        request.originMgs = $.trim(request.originMgs || request.text || request.keyword || '');
     }
     if( request.text )
     {
