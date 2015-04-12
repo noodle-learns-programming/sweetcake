@@ -30,7 +30,10 @@ Helper.isMasterTab = function()
 };
 Helper.checkIsImageLink = function($element)
 {
-    if( $element.is('a') && $element.find('img').length )
+    if ($element.is('a')
+        && $element.find('>img').length
+        && !$.trim($element.text())
+    )
     {
         return true;
     }
