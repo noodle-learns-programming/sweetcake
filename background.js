@@ -110,7 +110,7 @@ TabManager.dictOpenedLevelUrls  = {};
 TabManager.dictManagedTabs      = {};
 TabManager.preAddATab = function(tabInfo)
 {
-    if( !tabInfo.openerTabId )
+    if (!tabInfo.openerTabId || tabInfo.url.search('chrome://newtab/') !== -1)
     {
         return;
     }
@@ -165,7 +165,11 @@ TabManager.preAddATab = function(tabInfo)
     }
     if( this.latestUrl )
     {
-        this.dictManagedTabs[tabInfo.id].arrUrls[this.latestUrl.href] = this.latestUrl.text;
+        if( !this.dictManagedTabs[tabInfo.id].arrUrls[this.latestUrl.href] )
+        {
+            this.dictManagedTabs[tabInfo.id].arrUrls[this.latestUrl.href] = this.latestUrl.text;
+        }
+        this.latestUrl = null;
     }
 };
 TabManager.addTab = function(tab){
@@ -528,11 +532,6 @@ chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
     }
 });
 chrome.tabs.onCreated.addListener(function(tabInfo) {
-    if( !tabInfo.openerTabId )
-    {
-        tabInfo.openerTabId = TabManager.openerTabId;
-        TabManager.openerTabId = 0;
-    }
     TabManager.preAddATab(tabInfo);
 });
 
@@ -636,16 +635,15 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 return;
             }
             openerTab.iNumberTabOpened++;
-            TabManager.openerTabId = sender.tab.id;
             chrome.tabs.create({
                 url         : request.href,
                 active      : false,
-                openerTabId : sender.tab.id
+                openerTabId : sender.windowId
             }, function(tab){
                 //open new tab in silent mode
                 //dont know why can not call back here
                 tab.openerTabId = sender.tab.id;
-                TabManager.openerTabId = sender.tab.id;
+                TabManager.preAddATab(tab);
             });
             return;
         }
@@ -657,6 +655,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             active      : true,
             openerTabId : sender.tab.id
         }, function(tab){
+            tab.openerTabId = sender.tab.id;
+            TabManager.preAddATab(tab);
             //Open tab for user
         });
         return;

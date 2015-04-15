@@ -94,9 +94,12 @@ Helper.highlight = function(keywords)
         {
             return;
         }
-        if( location.host.search('google.com') !== -1 )
+        if( location.host.search('www.google.com') !== -1 )
         {
-            text += (',' + $(this).data('href'));
+            if( $(this).data('href') )
+            {
+                text += (',' + $(this).data('href'));
+            }
         }
         text = Helper.remove_unicode(text);
         text = text.replace(/\s+/g, ' ');
@@ -113,9 +116,12 @@ Helper.highlight = function(keywords)
 Helper.getText = function($element)
 {
     var text        = $element.text();
-    if( location.host.search('google.com') !== -1 )
+    if( location.host.search('www.google.com') !== -1 )
     {
-        text += (',' + $element.data('href'));
+        if( $(this).data('href') )
+        {
+            text += (',' + $(this).data('href'));
+        }
     }
     if( !text && location.host.search('facebook.com') !== -1 )
     {
