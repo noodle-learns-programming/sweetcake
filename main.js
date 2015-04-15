@@ -3,6 +3,8 @@
  | To avoid call many times
  |---------------------------------------------------------------------
  */
+/* global chrome */
+
 //if( window.__FACE_SEO__ ) return false;
 window.__FACE_SEO__ = true;
 /*
@@ -49,10 +51,11 @@ Helper.remove_unicode = function(str)
     str= str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g,"u");  
     str= str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g,"y");  
     str= str.replace(/đ/g,"d");  
-    str= str.replace(/!|@|%|\^|\*|\(|\)|\+|\=|\<|\>|\?|\/|,|\.|\:|\;|\'|\"|\&|\#|\[|\]|~|$|_/g,"-"); 
+    str= str.replace(/!|@|%|\^|\*|\(|\)|\+|\=|\<|\>|\?|\/|,|\.|\:|\;|\'|\"|\&|\#|\[|\]|~|\$|_/g,"-"); 
     str= str.replace(/-+-/g,"-");
-    str= str.replace(/^\-+|\-+$/g,""); 
-    return str;  
+    str= str.replace(/^\-+|\-+$»/g,"");
+    str= $.trim(str);
+    return str;
 };
 Helper.isMatchedBetweenTwo = function(str1, str2)
 {
@@ -91,7 +94,7 @@ Helper.highlight = function(keywords)
         {
             return;
         }
-        if( location.host.search('google.com') )
+        if( location.host.search('google.com') !== -1 )
         {
             text += (',' + $(this).data('href'));
         }
@@ -106,6 +109,27 @@ Helper.highlight = function(keywords)
     });
     Helper.iCurrentColor++;
     setTimeout(Helper.highlight.bind(this, keywords), 250);
+};
+Helper.getText = function($element)
+{
+    var text        = $element.text();
+    if( location.host.search('google.com') !== -1 )
+    {
+        text += (',' + $element.data('href'));
+    }
+    if( !text && location.host.search('facebook.com') !== -1 )
+    {
+        var $realElements = $element
+            .parents('.userContentWrapper')
+            .not('.userContent')
+            .find('a[href*="l.facebook.com"]');
+        text = $realElements.last().text();
+    }
+    if( Helper.checkIsImageLink($element) )
+    {
+        text = 'View image';
+    }
+    return text;
 };
 if( Config.isDebug ) {
     jQuery('a').css('color', 'green');
@@ -149,16 +173,8 @@ jQuery('body').on('click', 'a', function(e){
     {
         e.preventDefault();
         e.stopImmediatePropagation();
-        var text        = $target.text();
+        var text        = Helper.getText($target);
         var originMgs   = text;
-        if( location.host.search('google.com') )
-        {
-            text += (',' + $(this).data('href'));
-        }
-        if( Helper.checkIsImageLink($target) )
-        {
-            text = 'View image';
-        }
         chrome.runtime.sendMessage({
             'cmd'       : 'openTab',
             'text'      : text,
@@ -172,6 +188,7 @@ jQuery('body').on('click', 'a', function(e){
         });
         return false;
     }
+    return true;
 });
 jQuery('body').on('mouseover', 'a', function(e){
     var $target = $(this);
@@ -180,16 +197,8 @@ jQuery('body').on('mouseover', 'a', function(e){
     {
         return;
     }
-    var text        = $target.text();
+    var text        = Helper.getText($target);
     var originMgs   = text;
-    if( location.host.search('google.com') )
-    {
-        text += (',' + $(this).data('href'));
-    }
-    if( Helper.checkIsImageLink($target) )
-    {
-        text = 'View image';
-    }
     var message = {
         cmd         : 'addLink',
         text        : text,

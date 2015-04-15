@@ -1,3 +1,5 @@
+/* global chrome */
+
 Date.prototype.format = function(format) 
 {
     var o = {
@@ -329,9 +331,19 @@ TabManager.executeScript = function(tab)
     {
         return;
     }
+    var managedTab = TabManager.getAnElementById(tab.id);
+    /**
+     |--------------------------------------------------------------------------
+     | Fix bug Facebook | Tong quan: Khong thuc hien dc tinh nang tren nhung tab
+     | ma minh khogn quan ly
+     |--------------------------------------------------------------------------
+     */
+    if( !managedTab ||!managedTab.role )
+    {
+        return;
+    }
     TabManager._executeScript(tab, "jquery.min.js", function(){
         TabManager._executeScript(tab, "main.js", function(){
-            var managedTab = TabManager.getAnElementById(tab.id);
             if( TabManager.isSecondLevelTab(managedTab) )
             {
                 var keyword = managedTab.parent.keyword || [];
@@ -408,7 +420,7 @@ TabManager.checkTheTabIsOpen = function(url)
         {
             return true;
         }
-        for(href in managedTab.arrUrls )
+        for(var href in managedTab.arrUrls )
         {
             if( href === url )
             {
