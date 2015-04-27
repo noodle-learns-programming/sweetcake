@@ -151,7 +151,12 @@ jQuery(document).ready(function(e){
     $('#numpoint').css('color', 'red');
 });
 
-jQuery('body').on('click', 'a', function(e){
+jQuery(document).on('click', 'a', function(e){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    return false;
+});
+jQuery(document).on('mousedown', 'a', function(e){
     var $target = $(this);
     var link = $target.attr('href');
     if( !link )
@@ -175,9 +180,11 @@ jQuery('body').on('click', 'a', function(e){
         }
         return;
     }
+    if (e.which === 3) {
+        return true;
+    }
     if( !Helper.isMasterTab() )
     {
-        e.preventDefault();
         e.stopImmediatePropagation();
         var text        = Helper.getText($target);
         var originMgs   = text;
@@ -196,7 +203,7 @@ jQuery('body').on('click', 'a', function(e){
     }
     return true;
 });
-jQuery('body').on('mouseover', 'a', function(e){
+jQuery(document).on('mouseover', 'a', function(e){
     var $target = $(this);
     var link = $target.attr('href');
     if( link && link.indexOf('@@faceseo@@') >= 0 )
