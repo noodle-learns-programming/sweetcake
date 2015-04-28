@@ -151,13 +151,8 @@ jQuery(document).ready(function(e){
     $('#numpoint').css('color', 'red');
 });
 
-jQuery(document).on('click', 'a', function(e){
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    return false;
-});
-jQuery(document).on('mousedown', 'a', function(e){
-    var $target = $(this);
+jQuery(document).on('click', $('a'), function(e){
+    var $target = $(e.target);
     var link = $target.attr('href');
     if( !link )
     {
